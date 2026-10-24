@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  initializeApp 
-} from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+import { initializeApp } from "firebase/app";
 import { 
   getAuth, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   signOut, 
   onAuthStateChanged 
-} from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+} from "firebase/auth";
 import { 
   getFirestore, 
   doc, 
@@ -19,7 +17,7 @@ import {
   addDoc, 
   updateDoc, 
   serverTimestamp 
-} from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
+} from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCbzkhBZkwfyQunRgkiiIHLmoMzzno3lRU",
@@ -695,7 +693,7 @@ export default function App() {
                       required 
                       value={fullName} 
                       onChange={(e)=>setFullName(e.target.value)} 
-                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+++                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
                     />
                   </div>
                   <div>
@@ -715,7 +713,7 @@ export default function App() {
                 <input 
                   type="email" 
                   required 
-                  value={email} 
+                  value= {email} 
                   onChange={(e)=>setEmail(e.target.value)} 
                   className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
                 />
