@@ -16,6 +16,7 @@ import {
   getDocs, 
   addDoc, 
   updateDoc, 
+  deleteDoc,
   serverTimestamp,
   query,
   where
@@ -76,6 +77,10 @@ export default function App() {
     { id: '4', title: 'App Download & Review', reward: 14, link: '#' },
     { id: '5', title: 'Website Visit & Read Article', reward: 12, link: '#' }
   ]);
+
+  // Admin Task management states
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskReward, setNewTaskReward] = useState('');
 
   const [allDeposits, setAllDeposits] = useState([]);
   const [allWithdrawals, setAllWithdrawals] = useState([]);
@@ -343,6 +348,11 @@ export default function App() {
     }
   };
 
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    alert("Copied to clipboard: " + text);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white font-sans">
@@ -448,40 +458,110 @@ export default function App() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs text-slate-400">bKash Personal</label>
-                    <input 
-                      type="text" 
-                      value={gateways.bkash} 
-                      onChange={(e)=>setGateways({...gateways, bkash: e.target.value})} 
-                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                    />
+                    <div className="flex mt-1 space-x-2">
+                      <input 
+                        type="text" 
+                        value={gateways.bkash} 
+                        onChange={(e)=>setGateways({...gateways, bkash: e.target.value})} 
+                        className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                      />
+                      <button onClick={()=>copyToClipboard(gateways.bkash)} className="px-3 bg-blue-600 text-xs rounded">Copy</button>
+                    </div>
                   </div>
                   <div>
                     <label className="text-xs text-slate-400">Nagad Personal</label>
-                    <input 
-                      type="text" 
-                      value={gateways.nagad} 
-                      onChange={(e)=>setGateways({...gateways, nagad: e.target.value})} 
-                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                    />
+                    <div className="flex mt-1 space-x-2">
+                      <input 
+                        type="text" 
+                        value={gateways.nagad} 
+                        onChange={(e)=>setGateways({...gateways, nagad: e.target.value})} 
+                        className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                      />
+                      <button onClick={()=>copyToClipboard(gateways.nagad)} className="px-3 bg-blue-600 text-xs rounded">Copy</button>
+                    </div>
                   </div>
                   <div>
                     <label className="text-xs text-slate-400">Rocket Personal</label>
-                    <input 
-                      type="text" 
-                      value={gateways.rocket} 
-                      onChange={(e)=>setGateways({...gateways, rocket: e.target.value})} 
-                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                    />
+                    <div className="flex mt-1 space-x-2">
+                      <input 
+                        type="text" 
+                        value={gateways.rocket} 
+                        onChange={(e)=>setGateways({...gateways, rocket: e.target.value})} 
+                        className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                      />
+                      <button onClick={()=>copyToClipboard(gateways.rocket)} className="px-3 bg-blue-600 text-xs rounded">Copy</button>
+                    </div>
                   </div>
                   <div>
                     <label className="text-xs text-slate-400">Binance ID</label>
-                    <input 
-                      type="text" 
-                      value={gateways.binance} 
-                      onChange={(e)=>setGateways({...gateways, binance: e.target.value})} 
-                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                    />
+                    <div className="flex mt-1 space-x-2">
+                      <input 
+                        type="text" 
+                        value={gateways.binance} 
+                        onChange={(e)=>setGateways({...gateways, binance: e.target.value})} 
+                        className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                      />
+                      <button onClick={()=>copyToClipboard(gateways.binance)} className="px-3 bg-blue-600 text-xs rounded">Copy</button>
+                    </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Task Management */}
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow">
+                <h3 className="text-lg font-semibold mb-4 text-slate-200">Manage Tasks (Add / Delete)</h3>
+                <div className="flex space-x-2 mb-4">
+                  <input 
+                    type="text" 
+                    placeholder="Task Title" 
+                    value={newTaskTitle} 
+                    onChange={(e)=>setNewTaskTitle(e.target.value)} 
+                    className="flex-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                  />
+                  <input 
+                    type="number" 
+                    placeholder="Reward (৳)" 
+                    value={newTaskReward} 
+                    onChange={(e)=>setNewTaskReward(e.target.value)} 
+                    className="w-32 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                  />
+                  <button 
+                    onClick={() => {
+                      if (!newTaskTitle || !newTaskReward) return;
+                      const newTask = {
+                        id: Date.now().toString(),
+                        title: newTaskTitle,
+                        reward: Number(newTaskReward),
+                        link: '#'
+                      };
+                      setTasks([...tasks, newTask]);
+                      setNewTaskTitle('');
+                      setNewTaskReward('');
+                      alert("Task added successfully!");
+                    }}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-sm font-semibold rounded text-white"
+                  >
+                    Add Task
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {tasks.map(task => (
+                    <div key={task.id} className="flex justify-between items-center bg-slate-950 p-3 rounded border border-slate-800">
+                      <div>
+                        <p className="text-sm font-medium text-slate-200">{task.title}</p>
+                        <p className="text-xs text-blue-400">Reward: ৳{task.reward}</p>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          setTasks(tasks.filter(t => t.id !== task.id));
+                          alert("Task removed!");
+                        }}
+                        className="px-3 py-1 bg-red-600 hover:bg-red-700 text-xs rounded text-white"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -565,30 +645,13 @@ export default function App() {
                 </div>
               </div>
 
+              {/* User Management with Balance Adjustment & Ban */}
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow">
-                <h3 className="text-lg font-semibold mb-4 text-slate-200">User Management (Ban / Active)</h3>
-                <div className="space-y-3">
+                <h3 className="text-lg font-semibold mb-4 text-slate-200">User Management & Balance Adjustment</h3>
+                <div className="space-y-4">
                   {allUsers.length === 0 ? <p className="text-sm text-slate-400">No users found.</p> : 
                     allUsers.map(usr => (
-                      <div key={usr.id} className="flex justify-between items-center bg-slate-950 p-4 rounded-lg border border-slate-800">
-                        <div>
-                          <p className="text-sm font-medium text-slate-200">{usr.name} ({usr.email})</p>
-                          <p className="text-xs text-slate-400">Phone: {usr.phone || 'N/A'} | Status: <span className={usr.status === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
-                        </div>
-                        {usr.email !== '1roxi1@gmail.com' && (
-                          <button 
-                            onClick={async () => {
-                              const newStatus = usr.status === 'Banned' ? 'Active' : 'Banned';
-                              await updateDoc(doc(db, "users", usr.id), { status: newStatus });
-                              fetchAllAdminData();
-                              alert(`User status changed to ${newStatus}`);
-                            }}
-                            className={`px-3 py-1.5 text-xs font-semibold rounded text-white ${usr.status === 'Banned' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}
-                          >
-                            {usr.status === 'Banned' ? 'Unban' : 'Ban'}
-                          </button>
-                        )}
-                      </div>
+                      <UserAdminRow key={usr.id} usr={usr} db={db} fetchAllAdminData={fetchAllAdminData} />
                     ))
                   }
                 </div>
@@ -664,9 +727,17 @@ export default function App() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4">
                   <h3 className="text-lg font-semibold text-slate-200">Add Deposit</h3>
-                  <div className="p-3 bg-slate-950 rounded border border-slate-800 text-sm">
-                    <p className="text-xs text-slate-400 mb-1">Send money to our company personal number:</p>
-                    <p className="font-bold text-blue-400">{depositMethod}: {gateways[depositMethod.toLowerCase()] || gateways.bkash}</p>
+                  <div className="p-3 bg-slate-950 rounded border border-slate-800 text-sm flex justify-between items-center">
+                    <div>
+                      <p className="text-xs text-slate-400 mb-1">Send money to our company personal number:</p>
+                      <p className="font-bold text-blue-400">{depositMethod}: {gateways[depositMethod.toLowerCase()] || gateways.bkash}</p>
+                    </div>
+                    <button 
+                      onClick={() => copyToClipboard(gateways[depositMethod.toLowerCase()] || gateways.bkash)}
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-xs rounded text-white"
+                    >
+                      Copy Number
+                    </button>
                   </div>
                   <form onSubmit={handleDepositSubmit} className="space-y-3">
                     <div>
@@ -964,7 +1035,7 @@ export default function App() {
 
               <button 
                 type="submit" 
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-white shadow-`lg"
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-white shadow-lg"
               >
                 {authMode === 'login' ? 'Sign In' : 'Register Account'}
               </button>
@@ -987,6 +1058,83 @@ export default function App() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function UserAdminRow({ usr, db, fetchAllAdminData }) {
+  const [depWallet, setDepWallet] = useState(usr.depositWallet || 0);
+  const [earnWallet, setEarnWallet] = useState(usr.earningsWallet || 0);
+
+  const handleUpdateBalance = async () => {
+    try {
+      await updateDoc(doc(db, "users", usr.id), {
+        depositWallet: Number(depWallet),
+        earningsWallet: Number(earnWallet)
+      });
+      alert(`Wallet updated for ${usr.email}`);
+      fetchAllAdminData();
+    } catch (err) {
+      alert("Error: " + err.message);
+    }
+  };
+
+  const handleToggleBan = async () => {
+    const newStatus = usr.status === 'Banned' ? 'Active' : 'Banned';
+    try {
+      await updateDoc(doc(db, "users", usr.id), { status: newStatus });
+      fetchAllAdminData();
+      alert(`User status changed to ${newStatus}`);
+    } catch (err) {
+      alert("Error: " + err.message);
+    }
+  };
+
+  return (
+    <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-3">
+      <div className="flex justify-between items-center">
+        <div>
+          <p className="text-sm font-medium text-slate-200">{usr.name} ({usr.email})</p>
+          <p className="text-xs text-slate-400">Phone: {usr.phone || 'N/A'} | Status: <span className={usr.status === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
+        </div>
+        {usr.email !== '1roxi1@gmail.com' && (
+          <button 
+            onClick={handleToggleBan}
+            className={`px-3 py-1.5 text-xs font-semibold rounded text-white ${usr.status === 'Banned' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}
+          >
+            {usr.status === 'Banned' ? 'Unban' : 'Ban'}
+          </button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 items-center pt-2 border-t border-slate-800">
+        <div>
+          <label className="text-xs text-slate-400">Deposit Wallet (৳)</label>
+          <input 
+            type="number" 
+            value={depWallet} 
+            onChange={(e)=>setDepWallet(e.target.value)} 
+            className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-1.5 text-xs text-white"
+          />
+        </div>
+        <div>
+          <label className="text-xs text-slate-400">Earnings Wallet (৳)</label>
+          <input 
+            type="number" 
+            value={earnWallet} 
+            onChange={(e)=>setEarnWallet(e.target.value)} 
+            className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-1.5 text-xs text-white"
+          />
+        </div>
+        <div className="flex items-end h-full pt-5">
+          <button 
+            onClick={handleUpdateBalance}
+            className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-xs font-semibold rounded text-white"
+          >
+            Update Balance
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
