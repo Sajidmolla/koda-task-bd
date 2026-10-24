@@ -49,6 +49,10 @@ export default function App() {
   const [phone, setPhone] = useState('');
   const [authError, setAuthError] = useState('');
 
+  // Profile editable states
+  const [profileName, setProfileName] = useState('');
+  const [profilePhone, setProfilePhone] = useState('');
+
   const [depositMethod, setDepositMethod] = useState('bKash');
   const [depositAmount, setDepositAmount] = useState('');
   const [depositTrxId, setDepositTrxId] = useState('');
@@ -95,6 +99,7 @@ export default function App() {
       tasks: "Tasks",
       wallet: "Wallet & Transactions",
       membership: "Membership",
+      profile: "Profile",
       adminPanel: "Admin Panel",
       logout: "Logout",
       login: "Sign In",
@@ -102,11 +107,7 @@ export default function App() {
       depositWallet: "Deposit Wallet",
       earningsWallet: "Earnings Wallet",
       activePackage: "Active Package",
-      noPackage: "No Active Package",
-      deposit: "Deposit",
-      withdraw: "Withdraw",
-      submit: "Submit",
-      cancel: "Cancel"
+      noPackage: "No Active Package"
     },
     bn: {
       brand: "KODA Task",
@@ -115,6 +116,7 @@ export default function App() {
       tasks: "টাস্কসমূহ",
       wallet: "ওয়ালেট ও লেনদেন",
       membership: "মেম্বারশিপ",
+      profile: "প্রোফাইল",
       adminPanel: "অ্যাডমিন প্যানেল",
       logout: "লগআউট",
       login: "সাইন ইন",
@@ -122,47 +124,53 @@ export default function App() {
       depositWallet: "ডিপোজিট ওয়ালেট",
       earningsWallet: "আর্নিংস ওয়ালেট",
       activePackage: "সক্রিয় প্যাকেজ",
-      noPackage: "কোনো প্যাকেজ নেই",
-      deposit: "ডিপোজিট",
-      withdraw: "উত্তোলন",
-      submit: "জমা দিন",
-      cancel: "বাতিল"
+      noPackage: "কোনো প্যাকেজ নেই"
     }
   };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        if (currentUser.email === '1roxi1@gmail.com') {
-          setIsAdmin(true);
-          fetchAllAdminData();
-        } else {
-          setIsAdmin(false);
-          const docRef = doc(db, "users", currentUser.uid);
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            setUserData(docSnap.data());
+      try {
+        if (currentUser) {
+          setUser(currentUser);
+          if (currentUser.email === '1roxi1@gmail.com') {
+            setIsAdmin(true);
+            await fetchAllAdminData();
           } else {
-            const initialData = {
-              name: currentUser.displayName || "Member",
-              email: currentUser.email,
-              phone: "",
-              depositWallet: 0,
-              earningsWallet: 0,
-              package: null,
-              status: "Active"
-            };
-            await setDoc(docRef, initialData);
-            setUserData(initialData);
+            setIsAdmin(false);
+            const docRef = doc(db, "users", currentUser.uid);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+              const data = docSnap.data();
+              setUserData(data);
+              setProfileName(data.name || '');
+              setProfilePhone(data.phone || '');
+            } else {
+              const initialData = {
+                name: currentUser.displayName || "Member",
+                email: currentUser.email,
+                phone: "",
+                depositWallet: 0,
+                earningsWallet: 0,
+                package: null,
+                status: "Active"
+              };
+              await setDoc(docRef, initialData);
+              setUserData(initialData);
+              setProfileName(initialData.name);
+              setProfilePhone(initialData.phone);
+            }
           }
+        } else {
+          setUser(null);
+          setUserData(null);
+          setIsAdmin(false);
         }
-      } else {
-        setUser(null);
-        setUserData(null);
-        setIsAdmin(false);
+      } catch (err) {
+        console.error("Firebase Error:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
     return () => unsubscribe();
   }, []);
@@ -376,6 +384,15 @@ export default function App() {
           >
             ⭐ {t[lang].membership}
           </button>
+          <button 
+            onClick={() => {
+              if (!user) { setShowAuthModal(true); return; }
+              setActiveTab('profile');
+            }} 
+            className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition ${activeTab === 'profile' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+          >
+            👤 {t[lang].profile}
+          </button>
           {isAdmin && (
             <button 
               onClick={() => setActiveTab('admin')} 
@@ -464,6 +481,68 @@ export default function App() {
                     ))
                   }
                 </div>
+              </div>
+            </div>
+          ) : activeTab === 'profile' ? (
+            <div className="space-y-6 max-w-xl">
+              <h2 className="text-2xl font-bold text-blue-400">User Profile Settings</h2>
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4">
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!user) return;
+                  try {
+                    await updateDoc(doc(db, "users", user.uid), {
+                      name: profileName,
+                      phone: profilePhone
+                    });
+                    setUserData({ ...userData, name: profileName, phone: profilePhone });
+                    alert("Profile updated successfully!");
+                  } catch (err) {
+                    alert("Error: " + err.message);
+                  }
+                }} className="space-y-4">
+                  <div>
+                    <label className="text-xs text-slate-400">Full Name</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={profileName} 
+                      onChange={(e)=>setProfileName(e.target.value)} 
+                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400">Email Address (Cannot be changed)</label>
+                    <input 
+                      type="email" 
+                      disabled 
+                      value={user?.email || ''} 
+                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-slate-400 cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400">Mobile Number</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={profilePhone} 
+                      onChange={(e)=>setProfilePhone(e.target.value)} 
+                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400">Active Membership Package</label>
+                    <input 
+                      type="text" 
+                      disabled 
+                      value={userData?.package || 'No Active Package'} 
+                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-amber-400 cursor-not-allowed"
+                    />
+                  </div>
+                  <button type="submit" className="w-full py-2 bg-blue-600 hover:bg-blue-700 rounded font-bold text-white text-sm">
+                    Save Changes
+                  </button>
+                </form>
               </div>
             </div>
           ) : activeTab === 'wallet' ? (
@@ -693,7 +772,7 @@ export default function App() {
                       required 
                       value={fullName} 
                       onChange={(e)=>setFullName(e.target.value)} 
-++                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
                     />
                   </div>
                   <div>
@@ -713,7 +792,7 @@ export default function App() {
                 <input 
                   type="email" 
                   required 
-                  value= {email} 
+                  value={email} 
                   onChange={(e)=>setEmail(e.target.value)} 
                   className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
                 />
