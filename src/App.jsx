@@ -132,16 +132,24 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       try {
         if (currentUser) {
-          setUser(currentUser);
           if (currentUser.email === '1roxi1@gmail.com') {
+            setUser(currentUser);
             setIsAdmin(true);
             await fetchAllAdminData();
           } else {
-            setIsAdmin(false);
             const docRef = doc(db, "users", currentUser.uid);
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
               const data = docSnap.data();
+              if (data.status === 'Banned') {
+                alert("Your account has been banned by admin.");
+                await signOut(auth);
+                setUser(null);
+                setUserData(null);
+                setIsAdmin(false);
+                setLoading(false);
+                return;
+              }
               setUserData(data);
               setProfileName(data.name || '');
               setProfilePhone(data.phone || '');
@@ -160,6 +168,8 @@ export default function App() {
               setProfileName(initialData.name);
               setProfilePhone(initialData.phone);
             }
+            setUser(currentUser);
+            setIsAdmin(false);
           }
         } else {
           setUser(null);
@@ -407,6 +417,7 @@ export default function App() {
           {isAdmin && activeTab === 'admin' ? (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-indigo-400">Admin Control Panel</h2>
+              
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow">
                 <h3 className="text-lg font-semibold mb-4 text-slate-200">Manage Payment Gateways</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -482,6 +493,82 @@ export default function App() {
                   }
                 </div>
               </div>
+
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow">
+                <h3 className="text-lg font-semibold mb-4 text-slate-200">Withdrawal Audit Requests</h3>
+                <div className="space-y-3">
+                  {allWithdrawals.length === 0 ? <p className="text-sm text-slate-400">No withdrawal requests.</p> : 
+                    allWithdrawals.map(wit => (
+                      <div key={wit.id} className="flex justify-between items-center bg-slate-950 p-4 rounded-lg border border-slate-800">
+                        <div>
+                          <p className="text-sm font-medium text-slate-200">{wit.email} - ৳{wit.amount} ({wit.method})</p>
+                          <p className="text-xs text-slate-400">Account: {wit.account} | Status: <span className="text-amber-400">{wit.status}</span></p>
+                        </div>
+                        {wit.status === 'Pending' && (
+                          <div className="flex space-x-2">
+                            <button 
+                              onClick={async () => {
+                                await updateDoc(doc(db, "withdrawals", wit.id), { status: "Approved" });
+                                fetchAllAdminData();
+                                alert("Withdrawal approved!");
+                              }}
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold rounded text-white"
+                            >
+                              Approve
+                            </button>
+                            <button 
+                              onClick={async () => {
+                                await updateDoc(doc(db, "withdrawals", wit.id), { status: "Rejected" });
+                                const usrRef = doc(db, "users", wit.uid);
+                                const usrSnap = await getDoc(usrRef);
+                                if(usrSnap.exists()) {
+                                  const currentEarn = usrSnap.data().earningsWallet || 0;
+                                  await updateDoc(usrRef, { earningsWallet: currentEarn + wit.amount });
+                                }
+                                fetchAllAdminData();
+                                alert("Withdrawal rejected & amount refunded!");
+                              }}
+                              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-xs font-semibold rounded text-white"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  }
+                </div>
+              </div>
+
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow">
+                <h3 className="text-lg font-semibold mb-4 text-slate-200">User Management (Ban / Active)</h3>
+                <div className="space-y-3">
+                  {allUsers.length === 0 ? <p className="text-sm text-slate-400">No users found.</p> : 
+                    allUsers.map(usr => (
+                      <div key={usr.id} className="flex justify-between items-center bg-slate-950 p-4 rounded-lg border border-slate-800">
+                        <div>
+                          <p className="text-sm font-medium text-slate-200">{usr.name} ({usr.email})</p>
+                          <p className="text-xs text-slate-400">Phone: {usr.phone || 'N/A'} | Status: <span className={usr.status === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
+                        </div>
+                        {usr.email !== '1roxi1@gmail.com' && (
+                          <button 
+                            onClick={async () => {
+                              const newStatus = usr.status === 'Banned' ? 'Active' : 'Banned';
+                              await updateDoc(doc(db, "users", usr.id), { status: newStatus });
+                              fetchAllAdminData();
+                              alert(`User status changed to ${newStatus}`);
+                            }}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded text-white ${usr.status === 'Banned' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}
+                          >
+                            {usr.status === 'Banned' ? 'Unban' : 'Ban'}
+                          </button>
+                        )}
+                      </div>
+                    ))
+                  }
+                </div>
+              </div>
+
             </div>
           ) : activeTab === 'profile' ? (
             <div className="space-y-6 max-w-xl">
@@ -803,6 +890,7 @@ export default function App() {
                   type="password" 
                   required 
                   value={password} 
+                  onChange={(e)=>password} 
                   onChange={(e)=>setPassword(e.target.value)} 
                   className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
                 />
