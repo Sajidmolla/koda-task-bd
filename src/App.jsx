@@ -16,7 +16,9 @@ import {
   getDocs, 
   addDoc, 
   updateDoc, 
-  serverTimestamp 
+  serverTimestamp,
+  query,
+  where
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -78,6 +80,10 @@ export default function App() {
   const [allDeposits, setAllDeposits] = useState([]);
   const [allWithdrawals, setAllWithdrawals] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
+
+  // User personal history states
+  const [myDeposits, setMyDeposits] = useState([]);
+  const [myWithdrawals, setMyWithdrawals] = useState([]);
 
   const [selectedTask, setSelectedTask] = useState(null);
   const [timer, setTimer] = useState(25);
@@ -170,11 +176,14 @@ export default function App() {
             }
             setUser(currentUser);
             setIsAdmin(false);
+            await fetchUserHistory(currentUser.uid);
           }
         } else {
           setUser(null);
           setUserData(null);
           setIsAdmin(false);
+          setMyDeposits([]);
+          setMyWithdrawals([]);
         }
       } catch (err) {
         console.error("Firebase Error:", err);
@@ -195,6 +204,20 @@ export default function App() {
 
       const usrSnap = await getDocs(collection(db, "users"));
       setAllUsers(usrSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchUserHistory = async (uid) => {
+    try {
+      const depQ = query(collection(db, "deposits"), where("uid", "==", uid));
+      const depSnap = await getDocs(depQ);
+      setMyDeposits(depSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+
+      const witQ = query(collection(db, "withdrawals"), where("uid", "==", uid));
+      const witSnap = await getDocs(witQ);
+      setMyWithdrawals(witSnap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (err) {
       console.error(err);
     }
@@ -264,6 +287,7 @@ export default function App() {
       alert("Deposit request submitted successfully! Admin will review soon.");
       setDepositAmount('');
       setDepositTrxId('');
+      fetchUserHistory(user.uid);
     } catch (err) {
       alert("Error: " + err.message);
     }
@@ -293,6 +317,7 @@ export default function App() {
       alert("Withdrawal request submitted successfully!");
       setWithdrawAmount('');
       setWithdrawAccount('');
+      fetchUserHistory(user.uid);
     } catch (err) {
       alert("Error: " + err.message);
     }
@@ -724,6 +749,48 @@ export default function App() {
                   </form>
                 </div>
               </div>
+
+              {/* User History Section inside Wallet */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4">
+                  <h3 className="text-lg font-semibold text-slate-200">My Deposit History</h3>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {myDeposits.length === 0 ? <p className="text-xs text-slate-400">No deposit history.</p> :
+                      myDeposits.map(d => (
+                        <div key={d.id} className="bg-slate-950 p-3 rounded border border-slate-800 flex justify-between items-center text-xs">
+                          <div>
+                            <p className="font-bold text-blue-400">৳{d.amount} ({d.method})</p>
+                            <p className="text-slate-400">TrxID: {d.trxId}</p>
+                          </div>
+                          <span className={`font-semibold ${d.status === 'Approved' ? 'text-emerald-400' : d.status === 'Rejected' ? 'text-red-400' : 'text-amber-400'}`}>
+                            {d.status}
+                          </span>
+                        </div>
+                      ))
+                    }
+                  </div>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4">
+                  <h3 className="text-lg font-semibold text-slate-200">My Withdrawal History</h3>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {myWithdrawals.length === 0 ? <p className="text-xs text-slate-400">No withdrawal history.</p> :
+                      myWithdrawals.map(w => (
+                        <div key={w.id} className="bg-slate-950 p-3 rounded border border-slate-800 flex justify-between items-center text-xs">
+                          <div>
+                            <p className="font-bold text-emerald-400">৳{w.amount} ({w.method})</p>
+                            <p className="text-slate-400">Acc: {w.account}</p>
+                          </div>
+                          <span className={`font-semibold ${w.status === 'Approved' ? 'text-emerald-400' : w.status === 'Rejected' ? 'text-red-400' : 'text-amber-400'}`}>
+                            {w.status}
+                          </span>
+                        </div>
+                      ))
+                    }
+                  </div>
+                </div>
+              </div>
+
             </div>
           ) : activeTab === 'membership' ? (
             <div className="space-y-6">
@@ -890,7 +957,6 @@ export default function App() {
                   type="password" 
                   required 
                   value={password} 
-                  onChange={(e)=>password} 
                   onChange={(e)=>setPassword(e.target.value)} 
                   className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
                 />
@@ -898,7 +964,7 @@ export default function App() {
 
               <button 
                 type="submit" 
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-white shadow-lg"
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-white shadow-`lg"
               >
                 {authMode === 'login' ? 'Sign In' : 'Register Account'}
               </button>
