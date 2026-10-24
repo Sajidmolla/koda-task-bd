@@ -134,7 +134,7 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        if (currentUser.email === 'admin@kodatask.com') {
+        if (currentUser.email === '1roxi1@gmail.com') {
           setIsAdmin(true);
           fetchAllAdminData();
         } else {
