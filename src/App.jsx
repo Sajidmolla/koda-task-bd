@@ -469,451 +469,488 @@ export default function App() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col">
-      {/* Top Header matching user screenshot */}
-      <header className="bg-slate-900 border-b border-slate-800 px-4 md:px-8 py-3.5 flex flex-col md:flex-row justify-between items-center sticky top-0 z-50 gap-3">
-        <div className="flex items-center justify-between w-full md:w-auto">
-          <div>
-            <h1 className="text-lg md:text-xl font-bold text-blue-400 tracking-wide">{t[lang].brand}</h1>
-            <p className="text-[10px] text-slate-400">{t[lang].subBrand}</p>
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col justify-between">
+      <div>
+        {/* Top Header matching user screenshot */}
+        <header className="bg-slate-900 border-b border-slate-800 px-4 md:px-8 py-3.5 flex flex-col md:flex-row justify-between items-center sticky top-0 z-50 gap-3">
+          <div className="flex items-center justify-between w-full md:w-auto">
+            <div>
+              <h1 className="text-lg md:text-xl font-bold text-blue-400 tracking-wide">{t[lang].brand}</h1>
+              <p className="text-[10px] text-slate-400">{t[lang].subBrand}</p>
+            </div>
+            <button 
+              onClick={() => setLang(lang === 'en' ? 'bn' : 'en')}
+              className="md:hidden px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-xs rounded font-semibold border border-slate-700"
+            >
+              {lang === 'en' ? 'বাংলা' : 'English'}
+            </button>
           </div>
-          <button 
-            onClick={() => setLang(lang === 'en' ? 'bn' : 'en')}
-            className="md:hidden px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-xs rounded font-semibold border border-slate-700"
-          >
-            {lang === 'en' ? 'বাংলা' : 'English'}
-          </button>
-        </div>
 
-        {/* Top Horizontal Navigation Tabs matching screenshot design */}
-        <nav className="flex items-center space-x-1 md:space-x-6 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-none">
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
+          {/* Top Horizontal Navigation Tabs matching screenshot design */}
+          <nav className="flex items-center space-x-1 md:space-x-6 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-none">
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`relative px-3 py-2 text-xs md:text-sm font-medium transition whitespace-nowrap ${isActive ? 'text-emerald-400 font-semibold' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  {tab.label}
+                  {isActive && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-400 rounded-full"></div>
+                  )}
+                </button>
+              );
+            })}
+            {isAdmin && (
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`relative px-3 py-2 text-xs md:text-sm font-medium transition whitespace-nowrap ${isActive ? 'text-emerald-400 font-semibold' : 'text-slate-400 hover:text-slate-200'}`}
+                onClick={() => setActiveTab('admin')}
+                className={`relative px-3 py-2 text-xs md:text-sm font-medium transition whitespace-nowrap ${activeTab === 'admin' ? 'text-indigo-400 font-semibold' : 'text-indigo-400/70 hover:text-indigo-300'}`}
               >
-                {tab.label}
-                {isActive && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-400 rounded-full"></div>
+                ⚙️ {t[lang].adminPanel}
+                {activeTab === 'admin' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-400 rounded-full"></div>
                 )}
               </button>
-            );
-          })}
-          {isAdmin && (
-            <button
-              onClick={() => setActiveTab('admin')}
-              className={`relative px-3 py-2 text-xs md:text-sm font-medium transition whitespace-nowrap ${activeTab === 'admin' ? 'text-indigo-400 font-semibold' : 'text-indigo-400/70 hover:text-indigo-300'}`}
-            >
-              ⚙️ {t[lang].adminPanel}
-              {activeTab === 'admin' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-400 rounded-full"></div>
-              )}
-            </button>
-          )}
-        </nav>
+            )}
+          </nav>
 
-        {/* Right side user actions */}
-        <div className="hidden md:flex items-center space-x-3">
-          <button 
-            onClick={() => setLang(lang === 'en' ? 'bn' : 'en')}
-            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-xs rounded font-semibold border border-slate-700"
-          >
-            {lang === 'en' ? 'বাংলা' : 'English'}
-          </button>
-
-          {user ? (
-            <div className="flex items-center space-x-3">
-              <button 
-                onClick={() => setActiveTab('profile')} 
-                className="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-full border border-slate-700 transition"
-              >
-                <span className="text-base">👤</span>
-                <span className="text-xs text-slate-200 font-medium truncate max-w-[100px]">
-                  {isAdmin ? 'Admin' : userData?.name || user.email}
-                </span>
-              </button>
-              <button 
-                onClick={handleLogout}
-                className="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-xs rounded-lg font-medium text-white"
-              >
-                {t[lang].logout}
-              </button>
-            </div>
-          ) : (
+          {/* Right side user actions */}
+          <div className="hidden md:flex items-center space-x-3">
             <button 
-              onClick={() => setShowAuthModal(true)}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-xs font-semibold rounded-lg text-white shadow-lg"
+              onClick={() => setLang(lang === 'en' ? 'bn' : 'en')}
+              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-xs rounded font-semibold border border-slate-700"
             >
-              {t[lang].login} / {t[lang].signup}
+              {lang === 'en' ? 'বাংলা' : 'English'}
             </button>
-          )}
-        </div>
-      </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 p-4 md:p-8 bg-slate-950 overflow-y-auto max-w-7xl mx-auto w-full">
-        {isAdmin && activeTab === 'admin' ? (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-indigo-400">Admin Control Panel</h2>
-            
-            {/* Payment Gateways & Minimum Withdrawal Config */}
-            <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow">
-              <h3 className="text-lg font-semibold mb-4 text-slate-200">Manage Payment Gateways & Minimum Withdrawal</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                <div>
-                  <label className="text-xs text-slate-400">bKash Personal</label>
-                  <div className="flex mt-1 space-x-2">
-                    <input 
-                      type="text" 
-                      value={gateways.bkash} 
-                      onChange={(e)=>setGateways({...gateways, bkash: e.target.value})} 
-                      className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                    />
-                    <button onClick={()=>copyToClipboard(gateways.bkash)} className="px-3 bg-blue-600 text-xs rounded text-white">Copy</button>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs text-slate-400">Nagad Personal</label>
-                  <div className="flex mt-1 space-x-2">
-                    <input 
-                      type="text" 
-                      value={gateways.nagad} 
-                      onChange={(e)=>setGateways({...gateways, nagad: e.target.value})} 
-                      className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                    />
-                    <button onClick={()=>copyToClipboard(gateways.nagad)} className="px-3 bg-blue-600 text-xs rounded text-white">Copy</button>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs text-slate-400">Rocket Personal</label>
-                  <div className="flex mt-1 space-x-2">
-                    <input 
-                      type="text" 
-                      value={gateways.rocket} 
-                      onChange={(e)=>setGateways({...gateways, rocket: e.target.value})} 
-                      className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                    />
-                    <button onClick={()=>copyToClipboard(gateways.rocket)} className="px-3 bg-blue-600 text-xs rounded text-white">Copy</button>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs text-slate-400">Binance ID</label>
-                  <div className="flex mt-1 space-x-2">
-                    <input 
-                      type="text" 
-                      value={gateways.binance} 
-                      onChange={(e)=>setGateways({...gateways, binance: e.target.value})} 
-                      className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                    />
-                    <button onClick={()=>copyToClipboard(gateways.binance)} className="px-3 bg-blue-600 text-xs rounded text-white">Copy</button>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs text-slate-400">Minimum Withdrawal (৳)</label>
-                  <div className="flex mt-1 space-x-2">
-                    <input 
-                      type="number" 
-                      value={gateways.minWithdraw} 
-                      onChange={(e)=>setGateways({...gateways, minWithdraw: Number(e.target.value)})} 
-                      className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                    />
-                  </div>
-                </div>
+            {user ? (
+              <div className="flex items-center space-x-3">
+                <button 
+                  onClick={() => setActiveTab('profile')} 
+                  className="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-full border border-slate-700 transition"
+                >
+                  <span className="text-base">👤</span>
+                  <span className="text-xs text-slate-200 font-medium truncate max-w-[100px]">
+                    {isAdmin ? 'Admin' : userData?.name || user.email}
+                  </span>
+                </button>
+                <button 
+                  onClick={handleLogout}
+                  className="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-xs rounded-lg font-medium text-white"
+                >
+                  {t[lang].logout}
+                </button>
               </div>
+            ) : (
               <button 
-                onClick={handleSaveGateways}
-                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold rounded-lg text-white shadow"
+                onClick={() => setShowAuthModal(true)}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-xs font-semibold rounded-lg text-white shadow-lg"
               >
-                Save Gateway Numbers & Settings
+                {t[lang].login} / {t[lang].signup}
               </button>
-            </div>
+            )}
+          </div>
+        </header>
 
-            {/* Task Management */}
-            <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow">
-              <h3 className="text-lg font-semibold mb-4 text-slate-200">Manage Tasks (Link & Timer Adjustable)</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
-                <input 
-                  type="text" 
-                  placeholder="Task Title" 
-                  value={newTaskTitle} 
-                  onChange={(e)=>setNewTaskTitle(e.target.value)} 
-                  className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                />
-                <input 
-                  type="number" 
-                  placeholder="Reward (৳)" 
-                  value={newTaskReward} 
-                  onChange={(e)=>setNewTaskReward(e.target.value)} 
-                  className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                />
-                <input 
-                  type="text" 
-                  placeholder="Task Link URL" 
-                  value={newTaskLink} 
-                  onChange={(e)=>setNewTaskLink(e.target.value)} 
-                  className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                />
-                <div className="flex space-x-2">
+        {/* Main Content Area */}
+        <main className="flex-1 p-4 md:p-8 bg-slate-950 overflow-y-auto max-w-7xl mx-auto w-full">
+          {isAdmin && activeTab === 'admin' ? (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold text-indigo-400">Admin Control Panel</h2>
+              
+              {/* Payment Gateways & Minimum Withdrawal Config */}
+              <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow">
+                <h3 className="text-lg font-semibold mb-4 text-slate-200">Manage Payment Gateways & Minimum Withdrawal</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                  <div>
+                    <label className="text-xs text-slate-400">bKash Personal</label>
+                    <div className="flex mt-1 space-x-2">
+                      <input 
+                        type="text" 
+                        value={gateways.bkash} 
+                        onChange={(e)=>setGateways({...gateways, bkash: e.target.value})} 
+                        className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                      />
+                      <button onClick={()=>copyToClipboard(gateways.bkash)} className="px-3 bg-blue-600 text-xs rounded text-white">Copy</button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400">Nagad Personal</label>
+                    <div className="flex mt-1 space-x-2">
+                      <input 
+                        type="text" 
+                        value={gateways.nagad} 
+                        onChange={(e)=>setGateways({...gateways, nagad: e.target.value})} 
+                        className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                      />
+                      <button onClick={()=>copyToClipboard(gateways.nagad)} className="px-3 bg-blue-600 text-xs rounded text-white">Copy</button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400">Rocket Personal</label>
+                    <div className="flex mt-1 space-x-2">
+                      <input 
+                        type="text" 
+                        value={gateways.rocket} 
+                        onChange={(e)=>setGateways({...gateways, rocket: e.target.value})} 
+                        className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                      />
+                      <button onClick={()=>copyToClipboard(gateways.rocket)} className="px-3 bg-blue-600 text-xs rounded text-white">Copy</button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400">Binance ID</label>
+                    <div className="flex mt-1 space-x-2">
+                      <input 
+                        type="text" 
+                        value={gateways.binance} 
+                        onChange={(e)=>setGateways({...gateways, binance: e.target.value})} 
+                        className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                      />
+                      <button onClick={()=>copyToClipboard(gateways.binance)} className="px-3 bg-blue-600 text-xs rounded text-white">Copy</button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400">Minimum Withdrawal (৳)</label>
+                    <div className="flex mt-1 space-x-2">
+                      <input 
+                        type="number" 
+                        value={gateways.minWithdraw} 
+                        onChange={(e)=>setGateways({...gateways, minWithdraw: Number(e.target.value)})} 
+                        className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <button 
+                  onClick={handleSaveGateways}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold rounded-lg text-white shadow"
+                >
+                  Save Gateway Numbers & Settings
+                </button>
+              </div>
+
+              {/* Task Management */}
+              <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow">
+                <h3 className="text-lg font-semibold mb-4 text-slate-200">Manage Tasks (Link & Timer Adjustable)</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
+                  <input 
+                    type="text" 
+                    placeholder="Task Title" 
+                    value={newTaskTitle} 
+                    onChange={(e)=>setNewTaskTitle(e.target.value)} 
+                    className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                  />
                   <input 
                     type="number" 
-                    placeholder="Timer (Sec)" 
-                    value={newTaskTimer} 
-                    onChange={(e)=>setNewTaskTimer(e.target.value)} 
-                    className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                    placeholder="Reward (৳)" 
+                    value={newTaskReward} 
+                    onChange={(e)=>setNewTaskReward(e.target.value)} 
+                    className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                  />
+                  <input 
+                    type="text" 
+                    placeholder="Task Link URL" 
+                    value={newTaskLink} 
+                    onChange={(e)=>setNewTaskLink(e.target.value)} 
+                    className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                  />
+                  <div className="flex space-x-2">
+                    <input 
+                      type="number" 
+                      placeholder="Timer (Sec)" 
+                      value={newTaskTimer} 
+                      onChange={(e)=>setNewTaskTimer(e.target.value)} 
+                      className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                    />
+                    <button 
+                      onClick={() => {
+                        if (!newTaskTitle || !newTaskReward) return;
+                        const newTask = {
+                          id: Date.now().toString(),
+                          title: newTaskTitle,
+                          reward: Number(newTaskReward),
+                          link: newTaskLink || 'https://example.com',
+                          timerSec: Number(newTaskTimer) || 25
+                        };
+                        setTasks([...tasks, newTask]);
+                        setNewTaskTitle('');
+                        setNewTaskReward('');
+                        setNewTaskLink('');
+                        alert("Task added successfully!");
+                      }}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-sm font-semibold rounded text-white whitespace-nowrap"
+                    >
+                      Add Task
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {tasks.map(task => (
+                    <div key={task.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-3 rounded border border-slate-800 gap-2">
+                      <div>
+                        <p className="text-sm font-medium text-slate-200">{task.title}</p>
+                        <p className="text-xs text-blue-400">Reward: ৳{task.reward} | Timer: {task.timerSec}s | Link: {task.link}</p>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          setTasks(tasks.filter(t => t.id !== task.id));
+                          alert("Task removed!");
+                        }}
+                        className="px-3 py-1 bg-red-600 hover:bg-red-700 text-xs rounded text-white self-end sm:self-center"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Membership Package Customization */}
+              <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow">
+                <h3 className="text-lg font-semibold mb-4 text-slate-200">Manage Membership Packages</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+                  <input 
+                    type="text" 
+                    placeholder="Package Name" 
+                    value={newPkgName} 
+                    onChange={(e)=>setNewPkgName(e.target.value)} 
+                    className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                  />
+                  <input 
+                    type="number" 
+                    placeholder="Price (৳)" 
+                    value={newPkgPrice} 
+                    onChange={(e)=>setNewPkgPrice(e.target.value)} 
+                    className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                  />
+                  <input 
+                    type="text" 
+                    placeholder="Validity (e.g. 30 Days)" 
+                    value={newPkgValidity} 
+                    onChange={(e)=>setNewPkgValidity(e.target.value)} 
+                    className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                  />
+                  <input 
+                    type="number" 
+                    placeholder="Daily Tasks Limit" 
+                    value={newPkgTasks} 
+                    onChange={(e)=>setNewPkgTasks(e.target.value)} 
+                    className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                  />
+                  <input 
+                    type="number" 
+                    placeholder="Daily Potential (৳)" 
+                    value={newPkgPotential} 
+                    onChange={(e)=>setNewPkgPotential(e.target.value)} 
+                    className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
                   />
                   <button 
                     onClick={() => {
-                      if (!newTaskTitle || !newTaskReward) return;
-                      const newTask = {
+                      if (!newPkgName || !newPkgPrice) return;
+                      const newP = {
                         id: Date.now().toString(),
-                        title: newTaskTitle,
-                        reward: Number(newTaskReward),
-                        link: newTaskLink || 'https://example.com',
-                        timerSec: Number(newTaskTimer) || 25
+                        name: newPkgName,
+                        price: Number(newPkgPrice),
+                        validity: newPkgValidity || '30 Days',
+                        dailyTasks: Number(newPkgTasks) || 5,
+                        dailyPotential: Number(newPkgPotential) || 100,
+                        desc: 'Customized membership plan via admin panel.',
+                        features: [`${newPkgTasks || 5} Daily Tasks`, `৳${newPkgPotential || 100} Daily Potential`, `${newPkgValidity || '30 Days'} Validity`, 'Instant Payouts']
                       };
-                      setTasks([...tasks, newTask]);
-                      setNewTaskTitle('');
-                      setNewTaskReward('');
-                      setNewTaskLink('');
-                      alert("Task added successfully!");
+                      setPackages([...packages, newP]);
+                      setNewPkgName('');
+                      setNewPkgPrice('');
+                      setNewPkgTasks('');
+                      setNewPkgPotential('');
+                      alert("Membership package added!");
                     }}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-sm font-semibold rounded text-white whitespace-nowrap"
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-sm font-semibold rounded text-white"
                   >
-                    Add Task
+                    Add Membership Plan
                   </button>
                 </div>
-              </div>
-              <div className="space-y-2">
-                {tasks.map(task => (
-                  <div key={task.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-3 rounded border border-slate-800 gap-2">
-                    <div>
-                      <p className="text-sm font-medium text-slate-200">{task.title}</p>
-                      <p className="text-xs text-blue-400">Reward: ৳{task.reward} | Timer: {task.timerSec}s | Link: {task.link}</p>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        setTasks(tasks.filter(t => t.id !== task.id));
-                        alert("Task removed!");
-                      }}
-                      className="px-3 py-1 bg-red-600 hover:bg-red-700 text-xs rounded text-white self-end sm:self-center"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Membership Package Customization */}
-            <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow">
-              <h3 className="text-lg font-semibold mb-4 text-slate-200">Manage Membership Packages</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
-                <input 
-                  type="text" 
-                  placeholder="Package Name" 
-                  value={newPkgName} 
-                  onChange={(e)=>setNewPkgName(e.target.value)} 
-                  className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                />
-                <input 
-                  type="number" 
-                  placeholder="Price (৳)" 
-                  value={newPkgPrice} 
-                  onChange={(e)=>setNewPkgPrice(e.target.value)} 
-                  className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                />
-                <input 
-                  type="text" 
-                  placeholder="Validity (e.g. 30 Days)" 
-                  value={newPkgValidity} 
-                  onChange={(e)=>setNewPkgValidity(e.target.value)} 
-                  className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                />
-                <input 
-                  type="number" 
-                  placeholder="Daily Tasks Limit" 
-                  value={newPkgTasks} 
-                  onChange={(e)=>setNewPkgTasks(e.target.value)} 
-                  className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                />
-                <input 
-                  type="number" 
-                  placeholder="Daily Potential (৳)" 
-                  value={newPkgPotential} 
-                  onChange={(e)=>setNewPkgPotential(e.target.value)} 
-                  className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                />
-                <button 
-                  onClick={() => {
-                    if (!newPkgName || !newPkgPrice) return;
-                    const newP = {
-                      id: Date.now().toString(),
-                      name: newPkgName,
-                      price: Number(newPkgPrice),
-                      validity: newPkgValidity || '30 Days',
-                      dailyTasks: Number(newPkgTasks) || 5,
-                      dailyPotential: Number(newPkgPotential) || 100,
-                      desc: 'Customized membership plan via admin panel.',
-                      features: [`${newPkgTasks || 5} Daily Tasks`, `৳${newPkgPotential || 100} Daily Potential`, `${newPkgValidity || '30 Days'} Validity`, 'Instant Payouts']
-                    };
-                    setPackages([...packages, newP]);
-                    setNewPkgName('');
-                    setNewPkgPrice('');
-                    setNewPkgTasks('');
-                    setNewPkgPotential('');
-                    alert("Membership package added!");
-                  }}
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-sm font-semibold rounded text-white"
-                >
-                  Add Membership Plan
-                </button>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {packages.map(pkg => (
-                  <div key={pkg.id} className="bg-slate-950 p-4 rounded-lg border border-slate-800 flex justify-between items-start">
-                    <div>
-                      <h4 className="font-bold text-amber-400">{pkg.name} - ৳{pkg.price} / {pkg.validity}</h4>
-                      <p className="text-xs text-slate-300 mt-1">Limit: {pkg.dailyTasks} Tasks | Potential: ৳{pkg.dailyPotential}</p>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        setPackages(packages.filter(p => p.id !== pkg.id));
-                        alert("Package removed!");
-                      }}
-                      className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-xs rounded text-white"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Deposit Audit Requests */}
-            <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow">
-              <h3 className="text-lg font-semibold mb-4 text-slate-200">Deposit Audit Requests</h3>
-              <div className="space-y-3">
-                {allDeposits.length === 0 ? <p className="text-sm text-slate-400">No deposit requests.</p> : 
-                  allDeposits.map(dep => (
-                    <div key={dep.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-lg border border-slate-800 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {packages.map(pkg => (
+                    <div key={pkg.id} className="bg-slate-950 p-4 rounded-lg border border-slate-800 flex justify-between items-start">
                       <div>
-                        <p className="text-sm font-medium text-slate-200">{dep.email} - ৳{dep.amount} ({dep.method}) [Target: {dep.targetTier || 'Direct Credit'}]</p>
-                        <p className="text-xs text-slate-400">TrxID: {dep.trxId} | Status: <span className="text-amber-400">{dep.status}</span></p>
+                        <h4 className="font-bold text-amber-400">{pkg.name} - ৳{pkg.price} / {pkg.validity}</h4>
+                        <p className="text-xs text-slate-300 mt-1">Limit: {pkg.dailyTasks} Tasks | Potential: ৳{pkg.dailyPotential}</p>
                       </div>
-                      {dep.status === 'Pending' && (
-                        <button 
-                          onClick={async () => {
-                            await updateDoc(doc(db, "deposits", dep.id), { status: "Approved" });
-                            const usrRef = doc(db, "users", dep.uid);
-                            const usrSnap = await getDoc(usrRef);
-                            if(usrSnap.exists()) {
-                              const currentDep = usrSnap.data().depositWallet || 0;
-                              await updateDoc(usrRef, { depositWallet: currentDep + dep.amount });
-                            }
-                            alert("Deposit approved and credited!");
-                          }}
-                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold rounded text-white"
-                        >
-                          Approve
-                        </button>
-                      )}
+                      <button 
+                        onClick={() => {
+                          setPackages(packages.filter(p => p.id !== pkg.id));
+                          alert("Package removed!");
+                        }}
+                        className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-xs rounded text-white"
+                      >
+                        Delete
+                      </button>
                     </div>
-                  ))
-                }
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Withdrawal Audit Requests */}
-            <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow">
-              <h3 className="text-lg font-semibold mb-4 text-slate-200">Withdrawal Audit Requests</h3>
-              <div className="space-y-3">
-                {allWithdrawals.length === 0 ? <p className="text-sm text-slate-400">No withdrawal requests.</p> : 
-                  allWithdrawals.map(wit => (
-                    <div key={wit.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-lg border border-slate-800 gap-2">
-                      <div>
-                        <p className="text-sm font-medium text-slate-200">{wit.email} - ৳{wit.amount} ({wit.method})</p>
-                        <p className="text-xs text-slate-400">Account: {wit.account} | Status: <span className="text-amber-400">{wit.status}</span></p>
-                      </div>
-                      {wit.status === 'Pending' && (
-                        <div className="flex space-x-2">
+              {/* Deposit Audit Requests */}
+              <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow">
+                <h3 className="text-lg font-semibold mb-4 text-slate-200">Deposit Audit Requests</h3>
+                <div className="space-y-3">
+                  {allDeposits.length === 0 ? <p className="text-sm text-slate-400">No deposit requests.</p> : 
+                    allDeposits.map(dep => (
+                      <div key={dep.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-lg border border-slate-800 gap-2">
+                        <div>
+                          <p className="text-sm font-medium text-slate-200">{dep.email} - ৳{dep.amount} ({dep.method}) [Target: {dep.targetTier || 'Direct Credit'}]</p>
+                          <p className="text-xs text-slate-400">TrxID: {dep.trxId} | Status: <span className="text-amber-400">{dep.status}</span></p>
+                        </div>
+                        {dep.status === 'Pending' && (
                           <button 
                             onClick={async () => {
-                              await updateDoc(doc(db, "withdrawals", wit.id), { status: "Approved" });
-                              alert("Withdrawal approved!");
+                              await updateDoc(doc(db, "deposits", dep.id), { status: "Approved" });
+                              const usrRef = doc(db, "users", dep.uid);
+                              const usrSnap = await getDoc(usrRef);
+                              if(usrSnap.exists()) {
+                                const currentDep = usrSnap.data().depositWallet || 0;
+                                await updateDoc(usrRef, { depositWallet: currentDep + dep.amount });
+                              }
+                              alert("Deposit approved and credited!");
                             }}
                             className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold rounded text-white"
                           >
                             Approve
                           </button>
-                          <button 
-                            onClick={async () => {
-                              await updateDoc(doc(db, "withdrawals", wit.id), { status: "Rejected" });
-                              const usrRef = doc(db, "users", wit.uid);
-                              const usrSnap = await getDoc(usrRef);
-                              if(usrSnap.exists()) {
-                                const currentEarn = usrSnap.data().earningsWallet || 0;
-                                await updateDoc(usrRef, { earningsWallet: currentEarn + wit.amount });
-                              }
-                              alert("Withdrawal rejected & refunded!");
-                            }}
-                            className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-xs font-semibold rounded text-white"
-                          >
-                            Reject
-                          </button>
+                        )}
+                      </div>
+                    ))
+                  }
+                </div>
+              </div>
+
+              {/* Withdrawal Audit Requests */}
+              <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow">
+                <h3 className="text-lg font-semibold mb-4 text-slate-200">Withdrawal Audit Requests</h3>
+                <div className="space-y-3">
+                  {allWithdrawals.length === 0 ? <p className="text-sm text-slate-400">No withdrawal requests.</p> : 
+                    allWithdrawals.map(wit => (
+                      <div key={wit.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-lg border border-slate-800 gap-2">
+                        <div>
+                          <p className="text-sm font-medium text-slate-200">{wit.email} - ৳{wit.amount} ({wit.method})</p>
+                          <p className="text-xs text-slate-400">Account: {wit.account} | Status: <span className="text-amber-400">{wit.status}</span></p>
                         </div>
-                      )}
+                        {wit.status === 'Pending' && (
+                          <div className="flex space-x-2">
+                            <button 
+                              onClick={async () => {
+                                await updateDoc(doc(db, "withdrawals", wit.id), { status: "Approved" });
+                                alert("Withdrawal approved!");
+                              }}
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold rounded text-white"
+                            >
+                              Approve
+                            </button>
+                            <button 
+                              onClick={async () => {
+                                await updateDoc(doc(db, "withdrawals", wit.id), { status: "Rejected" });
+                                const usrRef = doc(db, "users", wit.uid);
+                                const usrSnap = await getDoc(usrRef);
+                                if(usrSnap.exists()) {
+                                  const currentEarn = usrSnap.data().earningsWallet || 0;
+                                  await updateDoc(usrRef, { earningsWallet: currentEarn + wit.amount });
+                                }
+                                alert("Withdrawal rejected & refunded!");
+                              }}
+                              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-xs font-semibold rounded text-white"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  }
+                </div>
+              </div>
+
+              {/* User Management */}
+              <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow">
+                <h3 className="text-lg font-semibold mb-4 text-slate-200">User Management & Balance Adjustment</h3>
+                <div className="space-y-4">
+                  {allUsers.length === 0 ? <p className="text-sm text-slate-400">No users found.</p> : 
+                    allUsers.map(usr => (
+                      <UserAdminRow key={usr.id} usr={usr} db={db} />
+                    ))
+                  }
+                </div>
+              </div>
+
+            </div>
+          ) : activeTab === 'dashboard' ? (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl flex items-center space-x-4">
+                  <span className="text-3xl bg-blue-950 p-3 rounded-xl border border-blue-800">💳</span>
+                  <div>
+                    <p className="text-xs text-slate-400">{t[lang].depositWallet}</p>
+                    <h3 className="text-2xl font-bold text-blue-400 mt-1">৳ {userData ? userData.depositWallet : 0}</h3>
+                  </div>
+                </div>
+                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl flex items-center space-x-4">
+                  <span className="text-3xl bg-emerald-950 p-3 rounded-xl border border-emerald-800">💰</span>
+                  <div>
+                    <p className="text-xs text-slate-400">{t[lang].earningsWallet}</p>
+                    <h3 className="text-2xl font-bold text-emerald-400 mt-1">৳ {userData ? userData.earningsWallet : 0}</h3>
+                  </div>
+                </div>
+                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl flex items-center space-x-4">
+                  <span className="text-3xl bg-amber-950 p-3 rounded-xl border border-amber-800">⭐</span>
+                  <div>
+                    <p className="text-xs text-slate-400">{t[lang].activePackage}</p>
+                    <h3 className="text-base md:text-lg font-bold text-amber-400 mt-1 truncate">
+                      {userData?.package ? userData.package : t[lang].noPackage}
+                    </h3>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
+                <h3 className="text-lg font-semibold mb-4 text-slate-200">Available Tasks (Timer & Link Enabled)</h3>
+                <div className="space-y-3">
+                  {tasks.map(task => (
+                    <div key={task.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-xl border border-slate-800 gap-3">
+                      <div>
+                        <h4 className="font-medium text-slate-200 text-sm md:text-base">{task.title}</h4>
+                        <div className="flex flex-wrap items-center gap-3 mt-1">
+                          <span className="text-xs text-blue-400 font-semibold">Reward: ৳{task.reward}</span>
+                          <span className="text-xs text-amber-400 bg-amber-950/50 px-2 py-0.5 rounded border border-amber-800/50">⏱️ Timer: {task.timerSec} Seconds</span>
+                          <a href={task.link} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 underline hover:text-indigo-300">Visit Link ↗</a>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          if (!user) { setShowAuthModal(true); return; }
+                          if (!userData?.package) {
+                            alert("Please activate a membership package first!");
+                            setActiveTab('membership');
+                            return;
+                          }
+                          setSelectedTask(task);
+                          setTimer(task.timerSec || 25);
+                          setTimerActive(true);
+                          setTaskCompletedMsg('');
+                        }}
+                        className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-xs font-semibold rounded-xl text-white shadow-lg whitespace-nowrap"
+                      >
+                        Start Task
+                      </button>
                     </div>
-                  ))
-                }
-              </div>
-            </div>
-
-            {/* User Management */}
-            <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow">
-              <h3 className="text-lg font-semibold mb-4 text-slate-200">User Management & Balance Adjustment</h3>
-              <div className="space-y-4">
-                {allUsers.length === 0 ? <p className="text-sm text-slate-400">No users found.</p> : 
-                  allUsers.map(usr => (
-                    <UserAdminRow key={usr.id} usr={usr} db={db} />
-                  ))
-                }
-              </div>
-            </div>
-
-          </div>
-        ) : activeTab === 'dashboard' ? (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl flex items-center space-x-4">
-                <span className="text-3xl bg-blue-950 p-3 rounded-xl border border-blue-800">💳</span>
-                <div>
-                  <p className="text-xs text-slate-400">{t[lang].depositWallet}</p>
-                  <h3 className="text-2xl font-bold text-blue-400 mt-1">৳ {userData ? userData.depositWallet : 0}</h3>
-                </div>
-              </div>
-              <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl flex items-center space-x-4">
-                <span className="text-3xl bg-emerald-950 p-3 rounded-xl border border-emerald-800">💰</span>
-                <div>
-                  <p className="text-xs text-slate-400">{t[lang].earningsWallet}</p>
-                  <h3 className="text-2xl font-bold text-emerald-400 mt-1">৳ {userData ? userData.earningsWallet : 0}</h3>
-                </div>
-              </div>
-              <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl flex items-center space-x-4">
-                <span className="text-3xl bg-amber-950 p-3 rounded-xl border border-amber-800">⭐</span>
-                <div>
-                  <p className="text-xs text-slate-400">{t[lang].activePackage}</p>
-                  <h3 className="text-base md:text-lg font-bold text-amber-400 mt-1 truncate">
-                    {userData?.package ? userData.package : t[lang].noPackage}
-                  </h3>
+                  ))}
                 </div>
               </div>
             </div>
-
+          ) : activeTab === 'tasks' ? (
             <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
-              <h3 className="text-lg font-semibold mb-4 text-slate-200">Available Tasks (Timer & Link Enabled)</h3>
+              <h3 className="text-lg font-semibold mb-4 text-slate-200">Available Tasks</h3>
               <div className="space-y-3">
                 {tasks.map(task => (
                   <div key={task.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-xl border border-slate-800 gap-3">
@@ -946,467 +983,464 @@ export default function App() {
                 ))}
               </div>
             </div>
-          </div>
-        ) : activeTab === 'tasks' ? (
-          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
-            <h3 className="text-lg font-semibold mb-4 text-slate-200">Available Tasks</h3>
-            <div className="space-y-3">
-              {tasks.map(task => (
-                <div key={task.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-xl border border-slate-800 gap-3">
-                  <div>
-                    <h4 className="font-medium text-slate-200 text-sm md:text-base">{task.title}</h4>
-                    <div className="flex flex-wrap items-center gap-3 mt-1">
-                      <span className="text-xs text-blue-400 font-semibold">Reward: ৳{task.reward}</span>
-                      <span className="text-xs text-amber-400 bg-amber-950/50 px-2 py-0.5 rounded border border-amber-800/50">⏱️ Timer: {task.timerSec} Seconds</span>
-                      <a href={task.link} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 underline hover:text-indigo-300">Visit Link ↗</a>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      if (!user) { setShowAuthModal(true); return; }
-                      if (!userData?.package) {
-                        alert("Please activate a membership package first!");
-                        setActiveTab('membership');
-                        return;
-                      }
-                      setSelectedTask(task);
-                      setTimer(task.timerSec || 25);
-                      setTimerActive(true);
-                      setTaskCompletedMsg('');
-                    }}
-                    className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-xs font-semibold rounded-xl text-white shadow-lg whitespace-nowrap"
-                  >
-                    Start Task
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : activeTab === 'membership' ? (
-          <div className="space-y-6">
-            <div className="text-center max-w-2xl mx-auto mb-8">
-              <h2 className="text-2xl md:text-3xl font-bold text-amber-400 mb-2">Select Membership Plan</h2>
-              <p className="text-xs md:text-sm text-slate-400">Choose a tier that fits your daily availability. Upgrades take effect immediately and quota resets every 24 hours.</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {packages.map((pkg, idx) => (
-                <div key={pkg.id || idx} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between space-y-6 hover:border-amber-500/50 transition shadow-xl relative overflow-hidden">
-                  <div>
-                    <h3 className="text-xl font-bold text-slate-100">{pkg.name}</h3>
-                    <p className="text-xs text-slate-400 mt-1 min-h-[32px]">{pkg.desc}</p>
-                    
-                    <div className="my-6">
-                      <span className="text-3xl font-extrabold text-amber-400">৳{pkg.price}</span>
-                      <span className="text-xs text-slate-400"> / {pkg.validity}</span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 bg-slate-950 p-3 rounded-xl border border-slate-800/80 mb-6 text-center">
-                      <div>
-                        <p className="text-[10px] text-slate-400 uppercase tracking-wider">Daily Limit</p>
-                        <p className="text-sm font-bold text-slate-200 mt-0.5">{pkg.dailyTasks} Tasks</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-slate-400 uppercase tracking-wider">Daily Potential</p>
-                        <p className="text-sm font-bold text-emerald-400 mt-0.5">৳{pkg.dailyPotential}</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2.5">
-                      {pkg.features?.map((feat, fIdx) => (
-                        <div key={fIdx} className="flex items-start space-x-2 text-xs text-slate-300">
-                          <span className="text-emerald-400 font-bold">✓</span>
-                          <span>{feat}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <button 
-                    onClick={() => handleBuyPackage(pkg)}
-                    className="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-xl font-bold text-white text-sm shadow-lg shadow-amber-900/20 transition"
-                  >
-                    Deposit ৳{pkg.price} to Activate &gt;
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-center text-xs text-slate-400 gap-3">
-              <div className="flex items-center space-x-2">
-                <span className="text-emerald-400">🛡️</span>
-                <span>Direct Deposit Verification: Send funds via personal bKash or Nagad to activate packages instantly upon admin transaction validation.</span>
+          ) : activeTab === 'membership' ? (
+            <div className="space-y-6">
+              <div className="text-center max-w-2xl mx-auto mb-8">
+                <h2 className="text-2xl md:text-3xl font-bold text-amber-400 mb-2">Select Membership Plan</h2>
+                <p className="text-xs md:text-sm text-slate-400">Choose a tier that fits your daily availability. Upgrades take effect immediately and quota resets every 24 hours.</p>
               </div>
-              <button onClick={() => setActiveTab('deposit')} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-lg whitespace-nowrap">
-                View Deposit Instructions
-              </button>
-            </div>
-          </div>
-        ) : activeTab === 'deposit' ? (
-          <div className="space-y-6 max-w-5xl mx-auto">
-            <div>
-              <p className="text-xs text-blue-400 font-medium">Manual Gateway • Personal Account Verification • Deduplication Indexed</p>
-              <h2 className="text-2xl md:text-3xl font-bold text-white tracking-wide mt-1">Deposit Verification Gateway</h2>
-              <p className="text-xs text-slate-400 mt-0.5">Transfer to our verified personal line, submit your Transaction ID (TrxID), and balance or package will be credited automatically.</p>
-            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Left Column: Select Provider & Official Number */}
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6">
-                <div>
-                  <label className="text-xs text-slate-400 block mb-2 font-medium">1. Select Financial Provider</label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {['bKash', 'Nagad', 'Rocket'].map((m) => (
-                      <button
-                        type="button"
-                        key={m}
-                        onClick={() => setDepositMethod(m)}
-                        className={`py-3 text-xs font-semibold rounded-xl border transition flex flex-col items-center justify-center space-y-1 ${depositMethod === m ? 'bg-blue-600 border-blue-500 text-white shadow-lg' : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'}`}
-                      >
-                        <span className="font-bold">{m}</span>
-                        <span className="text-[10px] opacity-75">Personal</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {packages.map((pkg, idx) => (
+                  <div key={pkg.id || idx} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between space-y-6 hover:border-amber-500/50 transition shadow-xl relative overflow-hidden">
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-100">{pkg.name}</h3>
+                      <p className="text-xs text-slate-400 mt-1 min-h-[32px]">{pkg.desc}</p>
+                      
+                      <div className="my-6">
+                        <span className="text-3xl font-extrabold text-amber-400">৳{pkg.price}</span>
+                        <span className="text-xs text-slate-400"> / {pkg.validity}</span>
+                      </div>
 
-                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-slate-400">Official {depositMethod} Personal Line:</span>
-                    <span className="text-xs text-emerald-400 font-semibold flex items-center space-x-1">
-                      <span>●</span>
-                      <span>Verified Active</span>
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-800">
-                    <span className="text-lg md:text-xl font-extrabold font-mono text-white tracking-wider">
-                      {gateways[depositMethod.toLowerCase()] || gateways.bkash}
-                    </span>
+                      <div className="grid grid-cols-2 gap-2 bg-slate-950 p-3 rounded-xl border border-slate-800/80 mb-6 text-center">
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase tracking-wider">Daily Limit</p>
+                          <p className="text-sm font-bold text-slate-200 mt-0.5">{pkg.dailyTasks} Tasks</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase tracking-wider">Daily Potential</p>
+                          <p className="text-sm font-bold text-emerald-400 mt-0.5">৳{pkg.dailyPotential}</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2.5">
+                        {pkg.features?.map((feat, fIdx) => (
+                          <div key={fIdx} className="flex items-start space-x-2 text-xs text-slate-300">
+                            <span className="text-emerald-400 font-bold">✓</span>
+                            <span>{feat}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
                     <button 
-                      onClick={() => copyToClipboard(gateways[depositMethod.toLowerCase()] || gateways.bkash)}
-                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs rounded-lg text-white font-medium flex items-center space-x-1 border border-slate-700"
+                      onClick={() => handleBuyPackage(pkg)}
+                      className="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-xl font-bold text-white text-sm shadow-lg shadow-amber-900/20 transition"
                     >
-                      <span>📋</span>
-                      <span>Copy</span>
+                      Deposit ৳{pkg.price} to Activate &gt;
                     </button>
                   </div>
-                </div>
-
-                <div className="space-y-2 text-xs text-slate-400">
-                  <p className="text-slate-300 font-semibold mb-1">Instructions:</p>
-                  <p>01. Open your {depositMethod} App and choose <strong className="text-slate-200">Send Money</strong>.</p>
-                  <p>02. Send exact amount to <strong className="text-blue-400 font-mono">{gateways[depositMethod.toLowerCase()] || gateways.bkash}</strong>.</p>
-                  <p>03. Copy the returned <strong className="text-slate-200">Transaction ID (TrxID)</strong> and complete the verification form on the right.</p>
-                </div>
+                ))}
               </div>
 
-              {/* Right Column: Submit Reference Form */}
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl flex flex-col justify-between">
-                <form onSubmit={handleDepositSubmit} className="space-y-5">
-                  <div>
-                    <label className="text-xs text-slate-400 block mb-1 font-medium">2. Submit Transaction Reference</label>
-                    <label className="text-[11px] text-slate-400 block mb-1.5">Target Membership Tier (Optional)</label>
-                    <select
-                      value={targetTier}
-                      onChange={(e) => setTargetTier(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs md:text-sm text-white focus:border-blue-500 focus:outline-none"
-                    >
-                      <option value="Direct Balance Credit (No Auto-Package)">Direct Balance Credit (No Auto-Package)</option>
-                      {packages.map(p => (
-                        <option key={p.id} value={`${p.name} — ৳${p.price}`}>
-                          {p.name} — ৳{p.price} ({p.dailyTasks} Daily Tasks)
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-xs text-slate-400 block mb-1">Deposit Amount (BDT) *</label>
-                    <input 
-                      type="number" 
-                      required 
-                      placeholder="e.g. 500"
-                      value={depositAmount} 
-                      onChange={(e)=>setDepositAmount(e.target.value)} 
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:border-blue-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs text-slate-400 block mb-1">Transaction ID (TrxID) *</label>
-                    <input 
-                      type="text" 
-                      required 
-                      placeholder="e.g. 9N87A65B43"
-                      value={depositTrxId} 
-                      onChange={(e)=>setDepositTrxId(e.target.value)} 
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white font-mono focus:border-blue-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <button type="submit" className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 rounded-xl font-bold text-white text-sm shadow-lg shadow-emerald-900/20 transition flex items-center justify-center space-x-2">
-                    <span>🛡️ Submit Deposit Reference</span>
-                  </button>
-                </form>
-              </div>
-            </div>
-
-            {/* Deposit Audit Log matching screenshot */}
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4">
-              <h3 className="text-lg font-semibold text-slate-200">Deposit Audit Log</h3>
-              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                {myDeposits.length === 0 ? (
-                  <div className="text-center py-8 text-xs text-slate-500 border border-dashed border-slate-800 rounded-xl">
-                    No deposits recorded yet.
-                  </div>
-                ) : (
-                  myDeposits.map(d => (
-                    <div key={d.id} className="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center text-xs">
-                      <div>
-                        <p className="font-bold text-blue-400">৳{d.amount} ({d.method})</p>
-                        <p className="text-slate-400 text-[10px]">TrxID: {d.trxId} | Target: {d.targetTier || 'Direct Credit'}</p>
-                      </div>
-                      <span className={`font-semibold px-2 py-0.5 rounded text-[10px] ${d.status === 'Approved' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : d.status === 'Rejected' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}`}>
-                        {d.status}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        ) : activeTab === 'withdraw' ? (
-          <div className="space-y-6 max-w-4xl mx-auto">
-            <div>
-              <p className="text-xs text-blue-400 font-medium">Mobile Banking Disbursement • bKash / Nagad / Rocket • Zero Unjustified Holds</p>
-              <h2 className="text-2xl md:text-3xl font-bold text-white tracking-wide mt-1">Wallet Cashout Gateway</h2>
-              <p className="text-xs text-slate-400 mt-0.5">Transfer earnings directly to your personal mobile banking account. Requests are audited and settled with verifiable reference IDs.</p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6">
-                <div className="flex justify-between items-center bg-slate-950 p-4 rounded-xl border border-slate-800">
-                  <span className="text-xs text-slate-400">Available Wallet Balance</span>
-                  <span className="text-2xl font-extrabold text-white">৳{(userData?.earningsWallet || 0).toFixed(2)}</span>
+              <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-center text-xs text-slate-400 gap-3">
+                <div className="flex items-center space-x-2">
+                  <span className="text-emerald-400">🛡️</span>
+                  <span>Direct Deposit Verification: Send funds via personal bKash or Nagad to activate packages instantly upon admin transaction validation.</span>
                 </div>
+                <button onClick={() => setActiveTab('deposit')} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-lg whitespace-nowrap">
+                  View Deposit Instructions
+                </button>
+              </div>
+            </div>
+          ) : activeTab === 'deposit' ? (
+            <div className="space-y-6 max-w-5xl mx-auto">
+              <div>
+                <p className="text-xs text-blue-400 font-medium">Manual Gateway • Personal Account Verification • Deduplication Indexed</p>
+                <h2 className="text-2xl md:text-3xl font-bold text-white tracking-wide mt-1">Deposit Verification Gateway</h2>
+                <p className="text-xs text-slate-400 mt-0.5">Transfer to our verified personal line, submit your Transaction ID (TrxID), and balance or package will be credited automatically.</p>
+              </div>
 
-                <form onSubmit={handleWithdrawSubmit} className="space-y-5">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left Column: Select Provider & Official Number */}
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6">
                   <div>
-                    <label className="text-xs text-slate-400 block mb-2">Payout Provider</label>
+                    <label className="text-xs text-slate-400 block mb-2 font-medium">1. Select Financial Provider</label>
                     <div className="grid grid-cols-3 gap-3">
                       {['bKash', 'Nagad', 'Rocket'].map((m) => (
                         <button
                           type="button"
                           key={m}
-                          onClick={() => setWithdrawMethod(m)}
-                          className={`py-2.5 text-xs font-semibold rounded-xl border transition ${withdrawMethod === m ? 'bg-blue-600 border-blue-500 text-white shadow-lg' : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'}`}
+                          onClick={() => setDepositMethod(m)}
+                          className={`py-3 text-xs font-semibold rounded-xl border transition flex flex-col items-center justify-center space-y-1 ${depositMethod === m ? 'bg-blue-600 border-blue-500 text-white shadow-lg' : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'}`}
                         >
-                          {m}
+                          <span className="font-bold">{m}</span>
+                          <span className="text-[10px] opacity-75">Personal</span>
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  <div>
-                    <label className="text-xs text-slate-400 block mb-1">Personal Recipient Mobile Number *</label>
-                    <input 
-                      type="text" 
-                      required
-                      placeholder="01700000000"
-                      value={withdrawAccount} 
-                      onChange={(e)=>setWithdrawAccount(e.target.value)} 
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:border-blue-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs text-slate-400 block mb-1">Cashout Amount (BDT) *</label>
-                    <input 
-                      type="number" 
-                      required
-                      placeholder={`Min ৳${gateways.minWithdraw || 100}, Max ৳25000`}
-                      value={withdrawAmount} 
-                      onChange={(e)=>setWithdrawAmount(e.target.value)} 
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:border-blue-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 text-xs">
-                    <div className="flex justify-between text-slate-400">
-                      <span>Requested Gross:</span>
-                      <span className="text-white font-mono">৳{Number(withdrawAmount || 0).toFixed(2)}</span>
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-400">Official {depositMethod} Personal Line:</span>
+                      <span className="text-xs text-emerald-400 font-semibold flex items-center space-x-1">
+                        <span>●</span>
+                        <span>Verified Active</span>
+                      </span>
                     </div>
-                    <div className="flex justify-between text-slate-400">
-                      <span>Processing Fee (0%):</span>
-                      <span className="text-red-400 font-mono">-৳0.00</span>
-                    </div>
-                    <div className="flex justify-between text-slate-200 font-bold pt-2 border-t border-slate-800">
-                      <span>Net Receivable:</span>
-                      <span className="text-emerald-400 font-mono text-sm">৳{Number(withdrawAmount || 0).toFixed(2)}</span>
+                    <div className="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-800">
+                      <span className="text-lg md:text-xl font-extrabold font-mono text-white tracking-wider">
+                        {gateways[depositMethod.toLowerCase()] || gateways.bkash}
+                      </span>
+                      <button 
+                        onClick={() => copyToClipboard(gateways[depositMethod.toLowerCase()] || gateways.bkash)}
+                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs rounded-lg text-white font-medium flex items-center space-x-1 border border-slate-700"
+                      >
+                        <span>📋</span>
+                        <span>Copy</span>
+                      </button>
                     </div>
                   </div>
 
-                  <button type="submit" className="w-full py-3.5 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-blue-500 rounded-xl font-bold text-white text-sm shadow-lg shadow-blue-900/20 transition flex items-center justify-center space-x-2">
-                    <span>↗ Submit Cashout Request</span>
-                  </button>
-                </form>
-              </div>
-
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6 h-fit">
-                <div className="flex items-center space-x-2 text-blue-400 text-sm font-semibold border-b border-slate-800 pb-3">
-                  <span>🛡️</span>
-                  <span>WITHDRAWAL TERMS</span>
-                </div>
-                
-                <div className="space-y-4 text-xs text-slate-400">
-                  <div>
-                    <p className="font-bold text-slate-200 mb-0.5">Threshold Policy</p>
-                    <p>Minimum withdrawal is ৳{gateways.minWithdraw || 100}. Requests below this threshold cannot be processed.</p>
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-200 mb-0.5">Escrow & Refund Safety</p>
-                    <p>Funds are held safely in escrow during verification. In the rare event of rejection, funds return immediately to your balance.</p>
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-200 mb-0.5">Reference ID Tracking</p>
-                    <p>Every payout is logged with a verifiable TrxID accessible in your audit log below.</p>
+                  <div className="space-y-2 text-xs text-slate-400">
+                    <p className="text-slate-300 font-semibold mb-1">Instructions:</p>
+                    <p>01. Open your {depositMethod} App and choose <strong className="text-slate-200">Send Money</strong>.</p>
+                    <p>02. Send exact amount to <strong className="text-blue-400 font-mono">{gateways[depositMethod.toLowerCase()] || gateways.bkash}</strong>.</p>
+                    <p>03. Copy the returned <strong className="text-slate-200">Transaction ID (TrxID)</strong> and complete the verification form on the right.</p>
                   </div>
                 </div>
+
+                {/* Right Column: Submit Reference Form */}
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl flex flex-col justify-between">
+                  <form onSubmit={handleDepositSubmit} className="space-y-5">
+                    <div>
+                      <label className="text-xs text-slate-400 block mb-1 font-medium">2. Submit Transaction Reference</label>
+                      <label className="text-[11px] text-slate-400 block mb-1.5">Target Membership Tier (Optional)</label>
+                      <select
+                        value={targetTier}
+                        onChange={(e) => setTargetTier(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs md:text-sm text-white focus:border-blue-500 focus:outline-none"
+                      >
+                        <option value="Direct Balance Credit (No Auto-Package)">Direct Balance Credit (No Auto-Package)</option>
+                        {packages.map(p => (
+                          <option key={p.id} value={`${p.name} — ৳${p.price}`}>
+                            {p.name} — ৳{p.price} ({p.dailyTasks} Daily Tasks)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-slate-400 block mb-1">Deposit Amount (BDT) *</label>
+                      <input 
+                        type="number" 
+                        required 
+                        placeholder="e.g. 500"
+                        value={depositAmount} 
+                        onChange={(e)=>setDepositAmount(e.target.value)} 
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:border-blue-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-slate-400 block mb-1">Transaction ID (TrxID) *</label>
+                      <input 
+                        type="text" 
+                        required 
+                        placeholder="e.g. 9N87A65B43"
+                        value={depositTrxId} 
+                        onChange={(e)=>setDepositTrxId(e.target.value)} 
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white font-mono focus:border-blue-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <button type="submit" className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 rounded-xl font-bold text-white text-sm shadow-lg shadow-emerald-900/20 transition flex items-center justify-center space-x-2">
+                      <span>🛡️ Submit Deposit Reference</span>
+                    </button>
+                  </form>
+                </div>
               </div>
-            </div>
-          </div>
-        ) : activeTab === 'history' ? (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-blue-400">Transaction History Log</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4 shadow-xl">
-                <h3 className="text-lg font-semibold text-slate-200">Deposit History</h3>
-                <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-                  {myDeposits.length === 0 ? <p className="text-xs text-slate-400">No deposit history.</p> :
+
+              {/* Deposit Audit Log matching screenshot */}
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4">
+                <h3 className="text-lg font-semibold text-slate-200">Deposit Audit Log</h3>
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {myDeposits.length === 0 ? (
+                    <div className="text-center py-8 text-xs text-slate-500 border border-dashed border-slate-800 rounded-xl">
+                      No deposits recorded yet.
+                    </div>
+                  ) : (
                     myDeposits.map(d => (
                       <div key={d.id} className="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center text-xs">
                         <div>
                           <p className="font-bold text-blue-400">৳{d.amount} ({d.method})</p>
-                          <p className="text-slate-400 text-[10px]">TrxID: {d.trxId}</p>
+                          <p className="text-slate-400 text-[10px]">TrxID: {d.trxId} | Target: {d.targetTier || 'Direct Credit'}</p>
                         </div>
                         <span className={`font-semibold px-2 py-0.5 rounded text-[10px] ${d.status === 'Approved' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : d.status === 'Rejected' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}`}>
                           {d.status}
                         </span>
                       </div>
                     ))
-                  }
+                  )}
                 </div>
+              </div>
+            </div>
+          ) : activeTab === 'withdraw' ? (
+            <div className="space-y-6 max-w-4xl mx-auto">
+              <div>
+                <p className="text-xs text-blue-400 font-medium">Mobile Banking Disbursement • bKash / Nagad / Rocket • Zero Unjustified Holds</p>
+                <h2 className="text-2xl md:text-3xl font-bold text-white tracking-wide mt-1">Wallet Cashout Gateway</h2>
+                <p className="text-xs text-slate-400 mt-0.5">Transfer earnings directly to your personal mobile banking account. Requests are audited and settled with verifiable reference IDs.</p>
               </div>
 
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4 shadow-xl">
-                <h3 className="text-lg font-semibold text-slate-200">Withdrawal History</h3>
-                <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-                  {myWithdrawals.length === 0 ? <p className="text-xs text-slate-400">No withdrawal history.</p> :
-                    myWithdrawals.map(w => (
-                      <div key={w.id} className="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center text-xs">
-                        <div>
-                          <p className="font-bold text-emerald-400">৳{w.amount} ({w.method})</p>
-                          <p className="text-slate-400 text-[10px]">Acc: {w.account}</p>
-                        </div>
-                        <span className={`font-semibold px-2 py-0.5 rounded text-[10px] ${w.status === 'Approved' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : w.status === 'Rejected' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}`}>
-                          {w.status}
-                        </span>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6">
+                  <div className="flex justify-between items-center bg-slate-950 p-4 rounded-xl border border-slate-800">
+                    <span className="text-xs text-slate-400">Available Wallet Balance</span>
+                    <span className="text-2xl font-extrabold text-white">৳{(userData?.earningsWallet || 0).toFixed(2)}</span>
+                  </div>
+
+                  <form onSubmit={handleWithdrawSubmit} className="space-y-5">
+                    <div>
+                      <label className="text-xs text-slate-400 block mb-2">Payout Provider</label>
+                      <div className="grid grid-cols-3 gap-3">
+                        {['bKash', 'Nagad', 'Rocket'].map((m) => (
+                          <button
+                            type="button"
+                            key={m}
+                            onClick={() => setWithdrawMethod(m)}
+                            className={`py-2.5 text-xs font-semibold rounded-xl border transition ${withdrawMethod === m ? 'bg-blue-600 border-blue-500 text-white shadow-lg' : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'}`}
+                          >
+                            {m}
+                          </button>
+                        ))}
                       </div>
-                    ))
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-slate-400 block mb-1">Personal Recipient Mobile Number *</label>
+                      <input 
+                        type="text" 
+                        required
+                        placeholder="01700000000"
+                        value={withdrawAccount} 
+                        onChange={(e)=>setWithdrawAccount(e.target.value)} 
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:border-blue-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-slate-400 block mb-1">Cashout Amount (BDT) *</label>
+                      <input 
+                        type="number" 
+                        required
+                        placeholder={`Min ৳${gateways.minWithdraw || 100}, Max ৳25000`}
+                        value={withdrawAmount} 
+                        onChange={(e)=>setWithdrawAmount(e.target.value)} 
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:border-blue-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 text-xs">
+                      <div className="flex justify-between text-slate-400">
+                        <span>Requested Gross:</span>
+                        <span className="text-white font-mono">৳{Number(withdrawAmount || 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-slate-400">
+                        <span>Processing Fee (0%):</span>
+                        <span className="text-red-400 font-mono">-৳0.00</span>
+                      </div>
+                      <div className="flex justify-between text-slate-200 font-bold pt-2 border-t border-slate-800">
+                        <span>Net Receivable:</span>
+                        <span className="text-emerald-400 font-mono text-sm">৳{Number(withdrawAmount || 0).toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    <button type="submit" className="w-full py-3.5 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-blue-500 rounded-xl font-bold text-white text-sm shadow-lg shadow-blue-900/20 transition flex items-center justify-center space-x-2">
+                      <span>↗ Submit Cashout Request</span>
+                    </button>
+                  </form>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6 h-fit">
+                  <div className="flex items-center space-x-2 text-blue-400 text-sm font-semibold border-b border-slate-800 pb-3">
+                    <span>🛡️</span>
+                    <span>WITHDRAWAL TERMS</span>
+                  </div>
+                  
+                  <div className="space-y-4 text-xs text-slate-400">
+                    <div>
+                      <p className="font-bold text-slate-200 mb-0.5">Threshold Policy</p>
+                      <p>Minimum withdrawal is ৳{gateways.minWithdraw || 100}. Requests below this threshold cannot be processed.</p>
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-200 mb-0.5">Escrow & Refund Safety</p>
+                      <p>Funds are held safely in escrow during verification. In the rare event of rejection, funds return immediately to your balance.</p>
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-200 mb-0.5">Reference ID Tracking</p>
+                      <p>Every payout is logged with a verifiable TrxID accessible in your audit log below.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : activeTab === 'history' ? (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold text-blue-400">Transaction History Log</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4 shadow-xl">
+                  <h3 className="text-lg font-semibold text-slate-200">Deposit History</h3>
+                  <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                    {myDeposits.length === 0 ? <p className="text-xs text-slate-400">No deposit history.</p> :
+                      myDeposits.map(d => (
+                        <div key={d.id} className="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center text-xs">
+                          <div>
+                            <p className="font-bold text-blue-400">৳{d.amount} ({d.method})</p>
+                            <p className="text-slate-400 text-[10px]">TrxID: {d.trxId}</p>
+                          </div>
+                          <span className={`font-semibold px-2 py-0.5 rounded text-[10px] ${d.status === 'Approved' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : d.status === 'Rejected' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}`}>
+                            {d.status}
+                          </span>
+                        </div>
+                      ))
+                    }
+                  </div>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4 shadow-xl">
+                  <h3 className="text-lg font-semibold text-slate-200">Withdrawal History</h3>
+                  <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                    {myWithdrawals.length === 0 ? <p className="text-xs text-slate-400">No withdrawal history.</p> :
+                      myWithdrawals.map(w => (
+                        <div key={w.id} className="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center text-xs">
+                          <div>
+                            <p className="font-bold text-emerald-400">৳{w.amount} ({w.method})</p>
+                            <p className="text-slate-400 text-[10px]">Acc: {w.account}</p>
+                          </div>
+                          <span className={`font-semibold px-2 py-0.5 rounded text-[10px] ${w.status === 'Approved' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : w.status === 'Rejected' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}`}>
+                            {w.status}
+                          </span>
+                        </div>
+                      ))
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : activeTab === 'profile' ? (
+            <div className="space-y-6 max-w-xl mx-auto">
+              <h2 className="text-2xl font-bold text-blue-400 flex items-center space-x-2">
+                <span>👤</span>
+                <span>User Profile Settings</span>
+              </h2>
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4 shadow-xl">
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!user) return;
+                  try {
+                    await updateDoc(doc(db, "users", user.uid), {
+                      name: profileName,
+                      phone: profilePhone
+                    });
+                    setUserData({ ...userData, name: profileName, phone: profilePhone });
+                    alert("Profile updated successfully!");
+                  } catch (err) {
+                    alert("Error: " + err.message);
                   }
+                }} className="space-y-4">
+                  <div>
+                    <label className="text-xs text-slate-400">Full Name</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={profileName} 
+                      onChange={(e)=>setProfileName(e.target.value)} 
+                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2.5 text-sm text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400">Email Address (Cannot be changed)</label>
+                    <input 
+                      type="email" 
+                      disabled 
+                      value={user?.email || ''} 
+                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2.5 text-sm text-slate-400 cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400">Mobile Number</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={profilePhone} 
+                      onChange={(e)=>setProfilePhone(e.target.value)} 
+                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2.5 text-sm text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400">Active Membership Package</label>
+                    <input 
+                      type="text" 
+                      disabled 
+                      value={userData?.package || 'No Active Package'} 
+                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2.5 text-sm text-amber-400 cursor-not-allowed font-bold"
+                    />
+                  </div>
+                  <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold text-white text-sm shadow-lg">
+                    Save Changes
+                  </button>
+                </form>
+              </div>
+            </div>
+          ) : activeTab === 'support' ? (
+            <div className="space-y-6 max-w-xl mx-auto">
+              <h2 className="text-2xl font-bold text-blue-400 flex items-center space-x-2">
+                <span>🎧</span>
+                <span>Customer Support</span>
+              </h2>
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4 text-center">
+                <div className="text-4xl">💬</div>
+                <h3 className="text-lg font-bold text-slate-100">Need Help with Deposit or Task?</h3>
+                <p className="text-xs text-slate-400">Our support team is available 24/7 to help you out with any payment or account issues.</p>
+                <div className="pt-4 space-y-3">
+                  <a 
+                    href="https://t.me/Yours_support_admin" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="block w-full py-3 bg-sky-600 hover:bg-sky-700 rounded-xl font-bold text-white text-sm shadow-lg transition flex items-center justify-center space-x-2"
+                  >
+                    <span>✈️</span>
+                    <span>Join Telegram Support (t.me/Yours_support_admin)</span>
+                  </a>
                 </div>
               </div>
             </div>
+          ) : null}
+        </main>
+      </div>
+
+      {/* Professional Footer matching user screenshot with Telegram button */}
+      <footer className="bg-slate-900 border-t border-slate-800 py-4 px-4 md:px-8 mt-12 text-xs text-slate-400">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4 text-center md:text-left">
+            <span className="font-bold text-blue-400 text-sm">KODA Task</span>
+            <span>•</span>
+            <span>Membership-Based Task Platform</span>
+            <span>•</span>
+            <span className="flex items-center space-x-1 text-emerald-400">
+              <span>🛡️</span>
+              <span>Personal Deposit Verification</span>
+            </span>
+            <span>•</span>
+            <span>bKash / Nagad / Rocket Verification</span>
           </div>
-        ) : activeTab === 'profile' ? (
-          <div className="space-y-6 max-w-xl mx-auto">
-            <h2 className="text-2xl font-bold text-blue-400 flex items-center space-x-2">
-              <span>👤</span>
-              <span>User Profile Settings</span>
-            </h2>
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4 shadow-xl">
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                if (!user) return;
-                try {
-                  await updateDoc(doc(db, "users", user.uid), {
-                    name: profileName,
-                    phone: profilePhone
-                  });
-                  setUserData({ ...userData, name: profileName, phone: profilePhone });
-                  alert("Profile updated successfully!");
-                } catch (err) {
-                  alert("Error: " + err.message);
-                }
-              }} className="space-y-4">
-                <div>
-                  <label className="text-xs text-slate-400">Full Name</label>
-                  <input 
-                    type="text" 
-                    required
-                    value={profileName} 
-                    onChange={(e)=>setProfileName(e.target.value)} 
-                    className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2.5 text-sm text-white"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-400">Email Address (Cannot be changed)</label>
-                  <input 
-                    type="email" 
-                    disabled 
-                    value={user?.email || ''} 
-                    className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2.5 text-sm text-slate-400 cursor-not-allowed"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-400">Mobile Number</label>
-                  <input 
-                    type="text" 
-                    required
-                    value={profilePhone} 
-                    onChange={(e)=>setProfilePhone(e.target.value)} 
-                    className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2.5 text-sm text-white"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-400">Active Membership Package</label>
-                  <input 
-                    type="text" 
-                    disabled 
-                    value={userData?.package || 'No Active Package'} 
-                    className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2.5 text-sm text-amber-400 cursor-not-allowed font-bold"
-                  />
-                </div>
-                <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold text-white text-sm shadow-lg">
-                  Save Changes
-                </button>
-              </form>
-            </div>
+
+          <div className="flex items-center space-x-4">
+            <a 
+              href="https://t.me/Yours_support_admin" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center space-x-1.5 bg-sky-600 hover:bg-sky-700 text-white px-3 py-1.5 rounded-lg font-semibold text-xs shadow transition"
+            >
+              <span>✈️</span>
+              <span>Telegram Support</span>
+            </a>
+            <span className="text-slate-500">© 2026 KODA Task</span>
           </div>
-        ) : activeTab === 'support' ? (
-          <div className="space-y-6 max-w-xl mx-auto">
-            <h2 className="text-2xl font-bold text-blue-400 flex items-center space-x-2">
-              <span>🎧</span>
-              <span>Customer Support</span>
-            </h2>
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4 text-center">
-              <div className="text-4xl">💬</div>
-              <h3 className="text-lg font-bold text-slate-100">Need Help with Deposit or Task?</h3>
-              <p className="text-xs text-slate-400">Our support team is available 24/7 to help you out with any payment or account issues.</p>
-              <div className="pt-4 space-y-3">
-                <a 
-                  href="https://t.me/Yours_support_admin" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="block w-full py-3 bg-sky-600 hover:bg-sky-700 rounded-xl font-bold text-white text-sm shadow-lg transition"
-                >
-                  💬 Join Telegram Support (t.me/Yours_support_admin)
-                </a>
-              </div>
-            </div>
-          </div>
-        ) : null}
-      </main>
+        </div>
+      </footer>
 
       {/* Task Timer Modal */}
       {selectedTask && (
