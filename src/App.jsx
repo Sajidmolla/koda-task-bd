@@ -65,6 +65,7 @@ export default function App() {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAccount, setWithdrawAccount] = useState('');
 
+  // Gateways synced with Firestore
   const [gateways, setGateways] = useState({
     bkash: "01737966207",
     nagad: "01737966207",
@@ -161,6 +162,7 @@ export default function App() {
       wallet: "Wallet & Transactions",
       membership: "Membership",
       profile: "Profile",
+      support: "Support",
       adminPanel: "Admin Panel",
       logout: "Logout",
       login: "Sign In",
@@ -178,6 +180,7 @@ export default function App() {
       wallet: "ওয়ালেট ও লেনদেন",
       membership: "মেম্বারশিপ",
       profile: "প্রোফাইল",
+      support: "সাপোর্ট",
       adminPanel: "অ্যাডমিন প্যানেল",
       logout: "লগআউট",
       login: "সাইন ইন",
@@ -190,6 +193,20 @@ export default function App() {
   };
 
   useEffect(() => {
+    // Fetch gateways in real-time from Firestore
+    const unsubGateways = onSnapshot(doc(db, "settings", "gateways"), (docSnap) => {
+      if (docSnap.exists()) {
+        setGateways(docSnap.data());
+      } else {
+        setDoc(doc(db, "settings", "gateways"), {
+          bkash: "01737966207",
+          nagad: "01737966207",
+          rocket: "01737966207",
+          binance: "KODA-PAY-USDT-ID"
+        });
+      }
+    });
+
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       try {
         if (currentUser) {
@@ -273,6 +290,7 @@ export default function App() {
     });
 
     return () => {
+      unsubGateways();
       unsubscribeAuth();
       unsubAllDep();
       unsubAllWit();
@@ -326,6 +344,15 @@ export default function App() {
 
   const handleLogout = () => {
     signOut(auth);
+  };
+
+  const handleSaveGateways = async () => {
+    try {
+      await setDoc(doc(db, "settings", "gateways"), gateways);
+      alert("Payment gateways updated successfully!");
+    } catch (err) {
+      alert("Error updating gateways: " + err.message);
+    }
   };
 
   const handleDepositSubmit = async (e) => {
@@ -442,12 +469,18 @@ export default function App() {
 
           {user ? (
             <div className="flex items-center space-x-2 md:space-x-3">
-              <span className="text-xs md:text-sm text-slate-300 font-medium truncate max-w-[100px] md:max-w-none">
-                {isAdmin ? '👑 Admin' : userData?.name || user.email}
-              </span>
+              <button 
+                onClick={() => setActiveTab('profile')} 
+                className="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-full border border-slate-700 transition"
+              >
+                <span className="text-base">👤</span>
+                <span className="text-xs md:text-sm text-slate-200 font-medium truncate max-w-[100px] md:max-w-none">
+                  {isAdmin ? 'Admin' : userData?.name || user.email}
+                </span>
+              </button>
               <button 
                 onClick={handleLogout}
-                className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-xs rounded font-medium text-white"
+                className="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-xs rounded-lg font-medium text-white"
               >
                 {t[lang].logout}
               </button>
@@ -504,6 +537,12 @@ export default function App() {
           >
             👤 {t[lang].profile}
           </button>
+          <button 
+            onClick={() => { setActiveTab('support'); setMobileMenuOpen(false); }} 
+            className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition ${activeTab === 'support' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+          >
+            🎧 {t[lang].support}
+          </button>
           {isAdmin && (
             <button 
               onClick={() => { setActiveTab('admin'); setMobileMenuOpen(false); }} 
@@ -520,10 +559,10 @@ export default function App() {
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-indigo-400">Admin Control Panel</h2>
               
-              {/* Payment Gateways */}
+              {/* Payment Gateways (Fully customizable & saved to Firestore) */}
               <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow">
                 <h3 className="text-lg font-semibold mb-4 text-slate-200">Manage Payment Gateways</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="text-xs text-slate-400">bKash Personal</label>
                     <div className="flex mt-1 space-x-2">
@@ -573,6 +612,12 @@ export default function App() {
                     </div>
                   </div>
                 </div>
+                <button 
+                  onClick={handleSaveGateways}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold rounded-lg text-white shadow"
+                >
+                  Save Gateway Numbers
+                </button>
               </div>
 
               {/* Task Management (Link & Timer adjustable) */}
@@ -890,7 +935,10 @@ export default function App() {
             </div>
           ) : activeTab === 'profile' ? (
             <div className="space-y-6 max-w-xl mx-auto">
-              <h2 className="text-2xl font-bold text-blue-400">User Profile Settings</h2>
+              <h2 className="text-2xl font-bold text-blue-400 flex items-center space-x-2">
+                <span>👤</span>
+                <span>User Profile Settings</span>
+              </h2>
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4 shadow-xl">
                 <form onSubmit={async (e) => {
                   e.preventDefault();
@@ -950,9 +998,42 @@ export default function App() {
                 </form>
               </div>
             </div>
+          ) : activeTab === 'support' ? (
+            <div className="space-y-6 max-w-xl mx-auto">
+              <h2 className="text-2xl font-bold text-blue-400 flex items-center space-x-2">
+                <span>🎧</span>
+                <span>Customer Support</span>
+              </h2>
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4 text-center">
+                <div className="text-4xl">💬</div>
+                <h3 className="text-lg font-bold text-slate-100">Need Help with Deposit or Task?</h3>
+                <p className="text-xs text-slate-400">Our support team is available 24/7 to help you out with any payment or account issues.</p>
+                <div className="pt-4 space-y-3">
+                  <a 
+                    href="https://t.me/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="block w-full py-3 bg-sky-600 hover:bg-sky-700 rounded-xl font-bold text-white text-sm shadow-lg transition"
+                  >
+                    💬 Join Telegram Support Channel
+                  </a>
+                  <a 
+                    href="https://wa.me/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="block w-full py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-bold text-white text-sm shadow-lg transition"
+                  >
+                    📱 Contact WhatsApp Support
+                  </a>
+                </div>
+              </div>
+            </div>
           ) : activeTab === 'wallet' ? (
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-blue-400">Wallet & Transactions</h2>
+              <h2 className="text-2xl font-bold text-blue-400 flex items-center space-x-2">
+                <span>💳</span>
+                <span>Wallet & Transactions</span>
+              </h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4 shadow-xl">
@@ -1096,19 +1177,28 @@ export default function App() {
           ) : (
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl">
-                  <p className="text-xs text-slate-400">{t[lang].depositWallet}</p>
-                  <h3 className="text-2xl font-bold text-blue-400 mt-2">৳ {userData ? userData.depositWallet : 0}</h3>
+                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl flex items-center space-x-4">
+                  <span className="text-3xl bg-blue-950 p-3 rounded-xl border border-blue-800">💳</span>
+                  <div>
+                    <p className="text-xs text-slate-400">{t[lang].depositWallet}</p>
+                    <h3 className="text-2xl font-bold text-blue-400 mt-1">৳ {userData ? userData.depositWallet : 0}</h3>
+                  </div>
                 </div>
-                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl">
-                  <p className="text-xs text-slate-400">{t[lang].earningsWallet}</p>
-                  <h3 className="text-2xl font-bold text-emerald-400 mt-2">৳ {userData ? userData.earningsWallet : 0}</h3>
+                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl flex items-center space-x-4">
+                  <span className="text-3xl bg-emerald-950 p-3 rounded-xl border border-emerald-800">💰</span>
+                  <div>
+                    <p className="text-xs text-slate-400">{t[lang].earningsWallet}</p>
+                    <h3 className="text-2xl font-bold text-emerald-400 mt-1">৳ {userData ? userData.earningsWallet : 0}</h3>
+                  </div>
                 </div>
-                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl">
-                  <p className="text-xs text-slate-400">{t[lang].activePackage}</p>
-                  <h3 className="text-base md:text-lg font-bold text-amber-400 mt-2 truncate">
-                    {userData?.package ? userData.package : t[lang].noPackage}
-                  </h3>
+                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl flex items-center space-x-4">
+                  <span className="text-3xl bg-amber-950 p-3 rounded-xl border border-amber-800">⭐</span>
+                  <div>
+                    <p className="text-xs text-slate-400">{t[lang].activePackage}</p>
+                    <h3 className="text-base md:text-lg font-bold text-amber-400 mt-1 truncate">
+                      {userData?.package ? userData.package : t[lang].noPackage}
+                    </h3>
+                  </div>
                 </div>
               </div>
 
@@ -1324,7 +1414,7 @@ function UserAdminRow({ usr, db }) {
           <input 
             type="number" 
             value={depWallet} 
-            onChange={(e)=>setDepWallet(e.target.value)} 
+            onChange={(e)=>setDepWorkspace ? setDepWallet(e.target.value) : setDepWallet(e.target.value)} 
             className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white"
           />
         </div>
