@@ -480,134 +480,147 @@ export default function App() {
   const totalPendingFinance = pendingDepositsCount + pendingWithdrawalsCount;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col justify-between">
-      <div>
-        {/* Top Header matching user screenshot */}
-        <header className="bg-slate-900 border-b border-slate-800 px-4 md:px-8 py-3.5 flex flex-col md:flex-row justify-between items-center sticky top-0 z-50 gap-3">
-          <div className="flex items-center justify-between w-full md:w-auto">
-            <div>
-              <h1 className="text-lg md:text-xl font-bold text-blue-400 tracking-wide">{t[lang].brand}</h1>
-              <p className="text-[10px] text-slate-400">{t[lang].subBrand}</p>
-            </div>
-            <button 
-              onClick={() => setLang(lang === 'en' ? 'bn' : 'en')}
-              className="md:hidden px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-xs rounded font-semibold border border-slate-700"
-            >
-              {lang === 'en' ? 'বাংলা' : 'English'}
-            </button>
-          </div>
-
-          {/* Top Horizontal Navigation Tabs matching screenshot design */}
-          <nav className="flex items-center space-x-1 md:space-x-6 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-none">
-            {tabs.map((tab) => {
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`relative px-3 py-2 text-xs md:text-sm font-medium transition whitespace-nowrap ${isActive ? 'text-emerald-400 font-semibold' : 'text-slate-400 hover:text-slate-200'}`}
-                >
-                  {tab.label}
-                  {isActive && (
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-400 rounded-full"></div>
-                  )}
-                </button>
-              );
-            })}
-            {isAdmin && (
-              <button
-                onClick={() => setActiveTab('admin')}
-                className={`relative px-3 py-2 text-xs md:text-sm font-medium transition whitespace-nowrap ${activeTab === 'admin' ? 'text-indigo-400 font-semibold' : 'text-indigo-400/70 hover:text-indigo-300'}`}
-              >
-                ⚙️ {t[lang].adminPanel}
-                {activeTab === 'admin' && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-400 rounded-full"></div>
-                )}
-              </button>
-            )}
-          </nav>
-
-          {/* Right side user actions */}
-          <div className="hidden md:flex items-center space-x-3">
-            <button 
-              onClick={() => setLang(lang === 'en' ? 'bn' : 'en')}
-              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-xs rounded font-semibold border border-slate-700"
-            >
-              {lang === 'en' ? 'বাংলা' : 'English'}
-            </button>
-
-            {user ? (
-              <div className="flex items-center space-x-3">
-                <button 
-                  onClick={() => setActiveTab('profile')} 
-                  className="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-full border border-slate-700 transition"
-                >
-                  <span className="text-base">👤</span>
-                  <span className="text-xs text-slate-200 font-medium truncate max-w-[100px]">
-                    {isAdmin ? 'Admin' : userData?.name || user.email}
-                  </span>
-                </button>
-                <button 
-                  onClick={handleLogout}
-                  className="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-xs rounded-lg font-medium text-white"
-                >
-                  {t[lang].logout}
-                </button>
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col justify-between w-full overflow-x-hidden">
+      <div className="w-full">
+        {/* Top Header fully responsive & wrapped for mobile */}
+        <header className="bg-slate-900 border-b border-slate-800 px-3 md:px-8 py-3 sticky top-0 z-50 w-full">
+          <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3 w-full">
+            <div className="flex items-center justify-between w-full md:w-auto">
+              <div>
+                <h1 className="text-lg md:text-xl font-bold text-blue-400 tracking-wide">{t[lang].brand}</h1>
+                <p className="text-[10px] text-slate-400">{t[lang].subBrand}</p>
               </div>
-            ) : (
+              <div className="flex items-center space-x-2 md:hidden">
+                <button 
+                  onClick={() => setLang(lang === 'en' ? 'bn' : 'en')}
+                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-xs rounded font-semibold border border-slate-700"
+                >
+                  {lang === 'en' ? 'বাংলা' : 'English'}
+                </button>
+                {user ? (
+                  <button 
+                    onClick={() => setActiveTab('profile')} 
+                    className="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-full border border-slate-700"
+                  >
+                    👤
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => setShowAuthModal(true)}
+                    className="px-3 py-1 bg-blue-600 text-xs font-semibold rounded-lg text-white"
+                  >
+                    {t[lang].login}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Fully responsive wrapped/scrollable navigation tabs for mobile */}
+            <nav className="flex items-center space-x-1 md:space-x-4 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-none flex-nowrap md:flex-wrap justify-start md:justify-center">
+              {tabs.map((tab) => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`relative px-2.5 md:px-3 py-2 text-xs md:text-sm font-medium transition whitespace-nowrap rounded-lg ${isActive ? 'bg-slate-800 text-emerald-400 font-semibold border border-emerald-500/30' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+              {isAdmin && (
+                <button
+                  onClick={() => setActiveTab('admin')}
+                  className={`relative px-2.5 md:px-3 py-2 text-xs md:text-sm font-medium transition whitespace-nowrap rounded-lg ${activeTab === 'admin' ? 'bg-indigo-950 text-indigo-400 font-semibold border border-indigo-500/30' : 'text-indigo-400/80 hover:text-indigo-300 hover:bg-slate-800/50'}`}
+                >
+                  ⚙️ {t[lang].adminPanel}
+                </button>
+              )}
+            </nav>
+
+            {/* Right side desktop user actions */}
+            <div className="hidden md:flex items-center space-x-3">
               <button 
-                onClick={() => setShowAuthModal(true)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-xs font-semibold rounded-lg text-white shadow-lg"
+                onClick={() => setLang(lang === 'en' ? 'bn' : 'en')}
+                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-xs rounded font-semibold border border-slate-700"
               >
-                {t[lang].login} / {t[lang].signup}
+                {lang === 'en' ? 'বাংলা' : 'English'}
               </button>
-            )}
+
+              {user ? (
+                <div className="flex items-center space-x-3">
+                  <button 
+                    onClick={() => setActiveTab('profile')} 
+                    className="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-full border border-slate-700 transition"
+                  >
+                    <span className="text-base">👤</span>
+                    <span className="text-xs text-slate-200 font-medium truncate max-w-[100px]">
+                      {isAdmin ? 'Admin' : userData?.name || user.email}
+                    </span>
+                  </button>
+                  <button 
+                    onClick={handleLogout}
+                    className="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-xs rounded-lg font-medium text-white"
+                  >
+                    {t[lang].logout}
+                  </button>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => setShowAuthModal(true)}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-xs font-semibold rounded-lg text-white shadow-lg"
+                >
+                  {t[lang].login} / {t[lang].signup}
+                </button>
+              )}
+            </div>
           </div>
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 p-4 md:p-8 bg-slate-950 overflow-y-auto max-w-7xl mx-auto w-full">
+        <main className="flex-1 p-3 md:p-8 bg-slate-950 overflow-y-auto max-w-7xl mx-auto w-full">
           {isAdmin && activeTab === 'admin' ? (
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-indigo-400">Admin Control Panel</h2>
+              <h2 className="text-xl md:text-2xl font-bold text-indigo-400">Admin Control Panel</h2>
               
               {/* Admin Sub-Tabs matching user screenshot style */}
               <div className="flex flex-wrap items-center gap-2 bg-slate-900 border border-slate-800 p-2 rounded-xl">
                 <button
                   onClick={() => setAdminSubTab('overview')}
-                  className={`px-4 py-2 text-xs md:text-sm font-semibold rounded-lg transition ${adminSubTab === 'overview' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                  className={`px-3 py-2 text-xs md:text-sm font-semibold rounded-lg transition ${adminSubTab === 'overview' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
                 >
                   📊 Overview
                 </button>
                 <button
                   onClick={() => setAdminSubTab('finance')}
-                  className={`px-4 py-2 text-xs md:text-sm font-semibold rounded-lg transition relative ${adminSubTab === 'finance' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                  className={`px-3 py-2 text-xs md:text-sm font-semibold rounded-lg transition relative ${adminSubTab === 'finance' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
                 >
-                  💳 Finance & TrxID Verification {totalPendingFinance > 0 && <span className="ml-1.5 px-1.5 py-0.5 bg-amber-500 text-slate-950 text-[10px] rounded-full font-bold">{totalPendingFinance}</span>}
+                  💳 Finance {totalPendingFinance > 0 && <span className="ml-1.5 px-1.5 py-0.5 bg-amber-500 text-slate-950 text-[10px] rounded-full font-bold">{totalPendingFinance}</span>}
                 </button>
                 <button
                   onClick={() => setAdminSubTab('packages')}
-                  className={`px-4 py-2 text-xs md:text-sm font-semibold rounded-lg transition ${adminSubTab === 'packages' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                  className={`px-3 py-2 text-xs md:text-sm font-semibold rounded-lg transition ${adminSubTab === 'packages' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
                 >
-                  📦 Packages ({packages.length})
+                  📦 Packages
                 </button>
                 <button
                   onClick={() => setAdminSubTab('tasks')}
-                  className={`px-4 py-2 text-xs md:text-sm font-semibold rounded-lg transition ${adminSubTab === 'tasks' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                  className={`px-3 py-2 text-xs md:text-sm font-semibold rounded-lg transition ${adminSubTab === 'tasks' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
                 >
-                  ✨ Tasks & Task Synthesizer ({tasks.length})
+                  ✨ Tasks
                 </button>
                 <button
                   onClick={() => setAdminSubTab('users')}
-                  className={`px-4 py-2 text-xs md:text-sm font-semibold rounded-lg transition ${adminSubTab === 'users' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                  className={`px-3 py-2 text-xs md:text-sm font-semibold rounded-lg transition ${adminSubTab === 'users' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
                 >
-                  👤 User Control ({allUsers.length})
+                  👤 Users
                 </button>
                 <button
                   onClick={() => setAdminSubTab('gateways')}
-                  className={`px-4 py-2 text-xs md:text-sm font-semibold rounded-lg transition ${adminSubTab === 'gateways' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                  className={`px-3 py-2 text-xs md:text-sm font-semibold rounded-lg transition ${adminSubTab === 'gateways' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
                 >
-                  ⚙️ Payment Numbers & Limits
+                  ⚙️ Gateways
                 </button>
               </div>
 
@@ -636,7 +649,7 @@ export default function App() {
               {/* Sub-Tab 2: Finance & TrxID Verification */}
               {adminSubTab === 'finance' && (
                 <div className="space-y-6">
-                  <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4">
+                  <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-2xl shadow-xl space-y-4">
                     <h3 className="text-lg font-semibold text-slate-200">Deposit Verification & Audits</h3>
                     <div className="space-y-3">
                       {allDeposits.length === 0 ? <p className="text-xs text-slate-400">No deposit requests.</p> : 
@@ -669,7 +682,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4">
+                  <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-2xl shadow-xl space-y-4">
                     <h3 className="text-lg font-semibold text-slate-200">Withdrawal Audit & Payouts</h3>
                     <div className="space-y-3">
                       {allWithdrawals.length === 0 ? <p className="text-xs text-slate-400">No withdrawal requests.</p> : 
@@ -717,7 +730,7 @@ export default function App() {
 
               {/* Sub-Tab 3: Packages */}
               {adminSubTab === 'packages' && (
-                <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6">
+                <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-2xl shadow-xl space-y-6">
                   <h3 className="text-lg font-semibold text-slate-200">Manage Membership Packages</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     <input 
@@ -804,7 +817,7 @@ export default function App() {
 
               {/* Sub-Tab 4: Tasks & Task Synthesizer */}
               {adminSubTab === 'tasks' && (
-                <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6">
+                <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-2xl shadow-xl space-y-6">
                   <h3 className="text-lg font-semibold mb-4 text-slate-200">Tasks & Task Synthesizer (Link & Timer Adjustable)</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     <input 
@@ -882,7 +895,7 @@ export default function App() {
 
               {/* Sub-Tab 5: User Control (Matching user screenshot style) */}
               {adminSubTab === 'users' && (
-                <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6">
+                <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-2xl shadow-xl space-y-6">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                       <h3 className="text-lg font-semibold text-slate-200">Registered Users ({filteredUsers.length})</h3>
@@ -911,7 +924,7 @@ export default function App() {
 
               {/* Sub-Tab 6: Payment Numbers & Limits */}
               {adminSubTab === 'gateways' && (
-                <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6">
+                <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-2xl shadow-xl space-y-6">
                   <h3 className="text-lg font-semibold mb-2 text-slate-200">Payment Numbers & Withdrawal Limits</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                     <div>
@@ -1531,19 +1544,17 @@ export default function App() {
       </div>
 
       {/* Professional Footer matching user screenshot with Telegram button */}
-      <footer className="bg-slate-900 border-t border-slate-800 py-4 px-4 md:px-8 mt-12 text-xs text-slate-400">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex flex-wrap items-center gap-4 text-center md:text-left">
+      <footer className="bg-slate-900 border-t border-slate-800 py-4 px-4 md:px-8 mt-12 text-xs text-slate-400 w-full">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 w-full">
+          <div className="flex flex-wrap items-center gap-2 md:gap-4 text-center md:text-left justify-center md:justify-start">
             <span className="font-bold text-blue-400 text-sm">KODA Task</span>
-            <span>•</span>
+            <span className="hidden sm:inline">•</span>
             <span>Task-Based Earning Platform</span>
-            <span>•</span>
+            <span className="hidden sm:inline">•</span>
             <span className="flex items-center space-x-1 text-emerald-400">
               <span>🛡️</span>
               <span>Personal Deposit Verification</span>
             </span>
-            <span>•</span>
-            <span>bKash / Nagad / Rocket Verification</span>
           </div>
 
           <div className="flex items-center space-x-4">
@@ -1749,7 +1760,7 @@ function UserAdminRow({ usr, db }) {
         </div>
         <div className="flex items-end h-full pt-1 sm:pt-4">
           <button 
-            onClick={handleUpdateBalance}
+            onClick={handleUpdateButtonHandler => handleUpdateBalance()}
             className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-xs font-bold rounded-lg text-white shadow"
           >
             Update Balances
