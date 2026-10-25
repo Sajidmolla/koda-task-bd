@@ -1370,6 +1370,30 @@ export default function App() {
                   </div>
                 </div>
               </div>
+
+              {/* Withdrawal Audit Log matching screenshot */}
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4 mt-6">
+                <h3 className="text-lg font-semibold text-slate-200">Withdrawal Audit Log</h3>
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {myWithdrawals.length === 0 ? (
+                    <div className="text-center py-8 text-xs text-slate-500 border border-dashed border-slate-800 rounded-xl">
+                      No withdrawal requests logged yet.
+                    </div>
+                  ) : (
+                    myWithdrawals.map(w => (
+                      <div key={w.id} className="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center text-xs">
+                        <div>
+                          <p className="font-bold text-emerald-400">৳{w.amount} ({w.method})</p>
+                          <p className="text-slate-400 text-[10px]">Acc: {w.account}</p>
+                        </div>
+                        <span className={`font-semibold px-2 py-0.5 rounded text-[10px] ${w.status === 'Approved' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : w.status === 'Rejected' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}`}>
+                          {w.status}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
           ) : activeTab === 'history' ? (
             <div className="space-y-6">
@@ -1718,7 +1742,7 @@ function UserAdminRow({ usr, db }) {
           <label className="text-[10px] text-slate-400 uppercase tracking-wider">Earnings Wallet (৳)</label>
           <input 
             type="number" 
-            value={earnWallet} 
+            value= {earnWallet} 
             onChange={(e)=>setEarnWallet(e.target.value)} 
             className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
           />
