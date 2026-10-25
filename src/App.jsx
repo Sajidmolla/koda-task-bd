@@ -43,6 +43,7 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [lang, setLang] = useState('en');
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [adminSubTab, setAdminSubTab] = useState('overview');
   const [authMode, setAuthMode] = useState('login');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -63,7 +64,7 @@ export default function App() {
   const [depositTrxId, setDepositTrxId] = useState('');
   const [targetTier, setTargetTier] = useState('Direct Balance Credit (No Auto-Package)');
   
-  // Withdrawal gateway states matching previous screenshot design
+  // Withdrawal gateway states
   const [withdrawMethod, setWithdrawMethod] = useState('bKash');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAccount, setWithdrawAccount] = useState('');
@@ -91,6 +92,7 @@ export default function App() {
   const [newTaskReward, setNewTaskReward] = useState('');
   const [newTaskLink, setNewTaskLink] = useState('');
   const [newTaskTimer, setNewTaskTimer] = useState(25);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
 
   // Membership Plans matching user image style
   const [packages, setPackages] = useState([
@@ -142,7 +144,6 @@ export default function App() {
   const [newPkgValidity, setNewPkgValidity] = useState('30 Days');
   const [newPkgTasks, setNewPkgTasks] = useState('');
   const [newPkgPotential, setNewPkgPotential] = useState('');
-  const [newPkgDesc, setNewPkgDesc] = useState('');
 
   const [allDeposits, setAllDeposits] = useState([]);
   const [allWithdrawals, setAllWithdrawals] = useState([]);
@@ -468,6 +469,16 @@ export default function App() {
     { id: 'history', label: t[lang].history },
   ];
 
+  const filteredUsers = allUsers.filter(u => 
+    u.name?.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+    u.email?.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+    u.phone?.includes(userSearchQuery)
+  );
+
+  const pendingDepositsCount = allDeposits.filter(d => d.status === 'Pending').length;
+  const pendingWithdrawalsCount = allWithdrawals.filter(w => w.status === 'Pending').length;
+  const totalPendingFinance = pendingDepositsCount + pendingWithdrawalsCount;
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col justify-between">
       <div>
@@ -560,329 +571,413 @@ export default function App() {
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-indigo-400">Admin Control Panel</h2>
               
-              {/* Payment Gateways & Minimum Withdrawal Config */}
-              <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow">
-                <h3 className="text-lg font-semibold mb-4 text-slate-200">Manage Payment Gateways & Minimum Withdrawal</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                  <div>
-                    <label className="text-xs text-slate-400">bKash Personal</label>
-                    <div className="flex mt-1 space-x-2">
-                      <input 
-                        type="text" 
-                        value={gateways.bkash} 
-                        onChange={(e)=>setGateways({...gateways, bkash: e.target.value})} 
-                        className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                      />
-                      <button onClick={()=>copyToClipboard(gateways.bkash)} className="px-3 bg-blue-600 text-xs rounded text-white">Copy</button>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-400">Nagad Personal</label>
-                    <div className="flex mt-1 space-x-2">
-                      <input 
-                        type="text" 
-                        value={gateways.nagad} 
-                        onChange={(e)=>setGateways({...gateways, nagad: e.target.value})} 
-                        className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                      />
-                      <button onClick={()=>copyToClipboard(gateways.nagad)} className="px-3 bg-blue-600 text-xs rounded text-white">Copy</button>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-400">Rocket Personal</label>
-                    <div className="flex mt-1 space-x-2">
-                      <input 
-                        type="text" 
-                        value={gateways.rocket} 
-                        onChange={(e)=>setGateways({...gateways, rocket: e.target.value})} 
-                        className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                      />
-                      <button onClick={()=>copyToClipboard(gateways.rocket)} className="px-3 bg-blue-600 text-xs rounded text-white">Copy</button>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-400">Binance ID</label>
-                    <div className="flex mt-1 space-x-2">
-                      <input 
-                        type="text" 
-                        value={gateways.binance} 
-                        onChange={(e)=>setGateways({...gateways, binance: e.target.value})} 
-                        className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                      />
-                      <button onClick={()=>copyToClipboard(gateways.binance)} className="px-3 bg-blue-600 text-xs rounded text-white">Copy</button>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-400">Minimum Withdrawal (৳)</label>
-                    <div className="flex mt-1 space-x-2">
-                      <input 
-                        type="number" 
-                        value={gateways.minWithdraw} 
-                        onChange={(e)=>setGateways({...gateways, minWithdraw: Number(e.target.value)})} 
-                        className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <button 
-                  onClick={handleSaveGateways}
-                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold rounded-lg text-white shadow"
+              {/* Admin Sub-Tabs matching user screenshot style */}
+              <div className="flex flex-wrap items-center gap-2 bg-slate-900 border border-slate-800 p-2 rounded-xl">
+                <button
+                  onClick={() => setAdminSubTab('overview')}
+                  className={`px-4 py-2 text-xs md:text-sm font-semibold rounded-lg transition ${adminSubTab === 'overview' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
                 >
-                  Save Gateway Numbers & Settings
+                  📊 Overview
+                </button>
+                <button
+                  onClick={() => setAdminSubTab('finance')}
+                  className={`px-4 py-2 text-xs md:text-sm font-semibold rounded-lg transition relative ${adminSubTab === 'finance' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                >
+                  💳 Finance & TrxID Verification {totalPendingFinance > 0 && <span className="ml-1.5 px-1.5 py-0.5 bg-amber-500 text-slate-950 text-[10px] rounded-full font-bold">{totalPendingFinance}</span>}
+                </button>
+                <button
+                  onClick={() => setAdminSubTab('packages')}
+                  className={`px-4 py-2 text-xs md:text-sm font-semibold rounded-lg transition ${adminSubTab === 'packages' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                >
+                  📦 Packages ({packages.length})
+                </button>
+                <button
+                  onClick={() => setAdminSubTab('tasks')}
+                  className={`px-4 py-2 text-xs md:text-sm font-semibold rounded-lg transition ${adminSubTab === 'tasks' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                >
+                  ✨ Tasks & Task Synthesizer ({tasks.length})
+                </button>
+                <button
+                  onClick={() => setAdminSubTab('users')}
+                  className={`px-4 py-2 text-xs md:text-sm font-semibold rounded-lg transition ${adminSubTab === 'users' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                >
+                  👤 User Control ({allUsers.length})
+                </button>
+                <button
+                  onClick={() => setAdminSubTab('gateways')}
+                  className={`px-4 py-2 text-xs md:text-sm font-semibold rounded-lg transition ${adminSubTab === 'gateways' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                >
+                  ⚙️ Payment Numbers & Limits
                 </button>
               </div>
 
-              {/* Task Management */}
-              <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow">
-                <h3 className="text-lg font-semibold mb-4 text-slate-200">Manage Tasks (Link & Timer Adjustable)</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
-                  <input 
-                    type="text" 
-                    placeholder="Task Title" 
-                    value={newTaskTitle} 
-                    onChange={(e)=>setNewTaskTitle(e.target.value)} 
-                    className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                  />
-                  <input 
-                    type="number" 
-                    placeholder="Reward (৳)" 
-                    value={newTaskReward} 
-                    onChange={(e)=>setNewTaskReward(e.target.value)} 
-                    className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                  />
-                  <input 
-                    type="text" 
-                    placeholder="Task Link URL" 
-                    value={newTaskLink} 
-                    onChange={(e)=>setNewTaskLink(e.target.value)} 
-                    className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                  />
-                  <div className="flex space-x-2">
+              {/* Sub-Tab 1: Overview */}
+              {adminSubTab === 'overview' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl">
+                    <p className="text-xs text-slate-400">Total Registered Users</p>
+                    <h3 className="text-3xl font-extrabold text-blue-400 mt-2">{allUsers.length}</h3>
+                  </div>
+                  <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl">
+                    <p className="text-xs text-slate-400">Pending Deposit Requests</p>
+                    <h3 className="text-3xl font-extrabold text-amber-400 mt-2">{pendingDepositsCount}</h3>
+                  </div>
+                  <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl">
+                    <p className="text-xs text-slate-400">Pending Withdrawal Requests</p>
+                    <h3 className="text-3xl font-extrabold text-emerald-400 mt-2">{pendingWithdrawalsCount}</h3>
+                  </div>
+                  <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl">
+                    <p className="text-xs text-slate-400">Active Task Synthesizer</p>
+                    <h3 className="text-3xl font-extrabold text-indigo-400 mt-2">{tasks.length} Tasks</h3>
+                  </div>
+                </div>
+              )}
+
+              {/* Sub-Tab 2: Finance & TrxID Verification */}
+              {adminSubTab === 'finance' && (
+                <div className="space-y-6">
+                  <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4">
+                    <h3 className="text-lg font-semibold text-slate-200">Deposit Verification & Audits</h3>
+                    <div className="space-y-3">
+                      {allDeposits.length === 0 ? <p className="text-xs text-slate-400">No deposit requests.</p> : 
+                        allDeposits.map(dep => (
+                          <div key={dep.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-xl border border-slate-800 gap-2">
+                            <div>
+                              <p className="text-sm font-medium text-slate-200">{dep.email} - ৳{dep.amount} ({dep.method}) [Target: {dep.targetTier || 'Direct Credit'}]</p>
+                              <p className="text-xs text-slate-400">TrxID: <span className="text-blue-400 font-mono">{dep.trxId}</span> | Status: <span className="text-amber-400">{dep.status}</span></p>
+                            </div>
+                            {dep.status === 'Pending' && (
+                              <button 
+                                onClick={async () => {
+                                  await updateDoc(doc(db, "deposits", dep.id), { status: "Approved" });
+                                  const usrRef = doc(db, "users", dep.uid);
+                                  const usrSnap = await getDoc(usrRef);
+                                  if(usrSnap.exists()) {
+                                    const currentDep = usrSnap.data().depositWallet || 0;
+                                    await updateDoc(usrRef, { depositWallet: currentDep + dep.amount });
+                                  }
+                                  alert("Deposit approved and credited!");
+                                }}
+                                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold rounded-lg text-white shadow"
+                              >
+                                Approve Deposit
+                              </button>
+                            )}
+                          </div>
+                        ))
+                      }
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4">
+                    <h3 className="text-lg font-semibold text-slate-200">Withdrawal Audit & Payouts</h3>
+                    <div className="space-y-3">
+                      {allWithdrawals.length === 0 ? <p className="text-xs text-slate-400">No withdrawal requests.</p> : 
+                        allWithdrawals.map(wit => (
+                          <div key={wit.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-xl border border-slate-800 gap-2">
+                            <div>
+                              <p className="text-sm font-medium text-slate-200">{wit.email} - ৳{wit.amount} ({wit.method})</p>
+                              <p className="text-xs text-slate-400">Account: <span className="text-emerald-400 font-mono">{wit.account}</span> | Status: <span className="text-amber-400">{wit.status}</span></p>
+                            </div>
+                            {wit.status === 'Pending' && (
+                              <div className="flex space-x-2">
+                                <button 
+                                  onClick={async () => {
+                                    await updateDoc(doc(db, "withdrawals", wit.id), { status: "Approved" });
+                                    alert("Withdrawal approved!");
+                                  }}
+                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold rounded-lg text-white"
+                                >
+                                  Approve
+                                </button>
+                                <button 
+                                  onClick={async () => {
+                                    await updateDoc(doc(db, "withdrawals", wit.id), { status: "Rejected" });
+                                    const usrRef = doc(db, "users", wit.uid);
+                                    const usrSnap = await getDoc(usrRef);
+                                    if(usrSnap.exists()) {
+                                      const currentEarn = usrSnap.data().earningsWallet || 0;
+                                      await updateDoc(usrRef, { earningsWallet: currentEarn + wit.amount });
+                                    }
+                                    alert("Withdrawal rejected & refunded!");
+                                  }}
+                                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-xs font-semibold rounded-lg text-white"
+                                >
+                                  Reject & Refund
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      }
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Sub-Tab 3: Packages */}
+              {adminSubTab === 'packages' && (
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6">
+                  <h3 className="text-lg font-semibold text-slate-200">Manage Membership Packages</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <input 
+                      type="text" 
+                      placeholder="Package Name" 
+                      value={newPkgName} 
+                      onChange={(e)=>setNewPkgName(e.target.value)} 
+                      className="bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white"
+                    />
                     <input 
                       type="number" 
-                      placeholder="Timer (Sec)" 
-                      value={newTaskTimer} 
-                      onChange={(e)=>setNewTaskTimer(e.target.value)} 
-                      className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                      placeholder="Price (৳)" 
+                      value={newPkgPrice} 
+                      onChange={(e)=>setNewPkgPrice(e.target.value)} 
+                      className="bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white"
+                    />
+                    <input 
+                      type="text" 
+                      placeholder="Validity (e.g. 30 Days)" 
+                      value={newPkgValidity} 
+                      onChange={(e)=>setNewPkgValidity(e.target.value)} 
+                      className="bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white"
+                    />
+                    <input 
+                      type="number" 
+                      placeholder="Daily Tasks Limit" 
+                      value={newPkgTasks} 
+                      onChange={(e)=>setNewPkgTasks(e.target.value)} 
+                      className="bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white"
+                    />
+                    <input 
+                      type="number" 
+                      placeholder="Daily Potential (৳)" 
+                      value={newPkgPotential} 
+                      onChange={(e)=>setNewPkgPotential(e.target.value)} 
+                      className="bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white"
                     />
                     <button 
                       onClick={() => {
-                        if (!newTaskTitle || !newTaskReward) return;
-                        const newTask = {
+                        if (!newPkgName || !newPkgPrice) return;
+                        const newP = {
                           id: Date.now().toString(),
-                          title: newTaskTitle,
-                          reward: Number(newTaskReward),
-                          link: newTaskLink || 'https://example.com',
-                          timerSec: Number(newTaskTimer) || 25
+                          name: newPkgName,
+                          price: Number(newPkgPrice),
+                          validity: newPkgValidity || '30 Days',
+                          dailyTasks: Number(newPkgTasks) || 5,
+                          dailyPotential: Number(newPkgPotential) || 100,
+                          desc: 'Customized membership plan via admin panel.',
+                          features: [`${newPkgTasks || 5} Daily Tasks`, `৳${newPkgPotential || 100} Daily Potential`, `${newPkgValidity || '30 Days'} Validity`, 'Instant Payouts']
                         };
-                        setTasks([...tasks, newTask]);
-                        setNewTaskTitle('');
-                        setNewTaskReward('');
-                        setNewTaskLink('');
-                        alert("Task added successfully!");
+                        setPackages([...packages, newP]);
+                        setNewPkgName('');
+                        setNewPkgPrice('');
+                        setNewPkgTasks('');
+                        setNewPkgPotential('');
+                        alert("Membership package added!");
                       }}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-sm font-semibold rounded text-white whitespace-nowrap"
+                      className="py-3 bg-amber-600 hover:bg-amber-700 text-sm font-bold rounded-xl text-white shadow"
                     >
-                      Add Task
+                      Add Membership Plan
                     </button>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  {tasks.map(task => (
-                    <div key={task.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-3 rounded border border-slate-800 gap-2">
-                      <div>
-                        <p className="text-sm font-medium text-slate-200">{task.title}</p>
-                        <p className="text-xs text-blue-400">Reward: ৳{task.reward} | Timer: {task.timerSec}s | Link: {task.link}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-800">
+                    {packages.map(pkg => (
+                      <div key={pkg.id} className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex justify-between items-start">
+                        <div>
+                          <h4 className="font-bold text-amber-400">{pkg.name} — ৳{pkg.price} / {pkg.validity}</h4>
+                          <p className="text-xs text-slate-300 mt-1">Limit: {pkg.dailyTasks} Tasks | Potential: ৳{pkg.dailyPotential}</p>
+                        </div>
+                        <button 
+                          onClick={() => {
+                            setPackages(packages.filter(p => p.id !== pkg.id));
+                            alert("Package removed!");
+                          }}
+                          className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-xs font-semibold rounded-lg text-white"
+                        >
+                          Delete
+                        </button>
                       </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Sub-Tab 4: Tasks & Task Synthesizer */}
+              {adminSubTab === 'tasks' && (
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6">
+                  <h3 className="text-lg font-semibold mb-4 text-slate-200">Tasks & Task Synthesizer (Link & Timer Adjustable)</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <input 
+                      type="text" 
+                      placeholder="Task Title" 
+                      value={newTaskTitle} 
+                      onChange={(e)=>setNewTaskTitle(e.target.value)} 
+                      className="bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white"
+                    />
+                    <input 
+                      type="number" 
+                      placeholder="Reward (৳)" 
+                      value={newTaskReward} 
+                      onChange={(e)=>setNewTaskReward(e.target.value)} 
+                      className="bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white"
+                    />
+                    <input 
+                      type="text" 
+                      placeholder="Task Link URL" 
+                      value={newTaskLink} 
+                      onChange={(e)=>setNewTaskLink(e.target.value)} 
+                      className="bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white"
+                    />
+                    <div className="flex space-x-2">
+                      <input 
+                        type="number" 
+                        placeholder="Timer (Sec)" 
+                        value={newTaskTimer} 
+                        onChange={(e)=>setNewTaskTimer(e.target.value)} 
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white"
+                      />
                       <button 
                         onClick={() => {
-                          setTasks(tasks.filter(t => t.id !== task.id));
-                          alert("Task removed!");
+                          if (!newTaskTitle || !newTaskReward) return;
+                          const newTask = {
+                            id: Date.now().toString(),
+                            title: newTaskTitle,
+                            reward: Number(newTaskReward),
+                            link: newTaskLink || 'https://example.com',
+                            timerSec: Number(newTaskTimer) || 25
+                          };
+                          setTasks([...tasks, newTask]);
+                          setNewTaskTitle('');
+                          setNewTaskReward('');
+                          setNewTaskLink('');
+                          alert("Task added successfully!");
                         }}
-                        className="px-3 py-1 bg-red-600 hover:bg-red-700 text-xs rounded text-white self-end sm:self-center"
+                        className="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-sm font-bold rounded-xl text-white whitespace-nowrap shadow"
                       >
-                        Delete
+                        Add Task
                       </button>
                     </div>
-                  ))}
+                  </div>
+                  <div className="space-y-3 pt-4 border-t border-slate-800">
+                    {tasks.map(task => (
+                      <div key={task.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-xl border border-slate-800 gap-2">
+                        <div>
+                          <p className="text-sm font-medium text-slate-200">{task.title}</p>
+                          <p className="text-xs text-blue-400">Reward: ৳{task.reward} | Timer: {task.timerSec}s | Link: {task.link}</p>
+                        </div>
+                        <button 
+                          onClick={() => {
+                            setTasks(tasks.filter(t => t.id !== task.id));
+                            alert("Task removed!");
+                          }}
+                          className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-xs font-semibold rounded-lg text-white"
+                        >
+                          Delete Task
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* Membership Package Customization */}
-              <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow">
-                <h3 className="text-lg font-semibold mb-4 text-slate-200">Manage Membership Packages</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
-                  <input 
-                    type="text" 
-                    placeholder="Package Name" 
-                    value={newPkgName} 
-                    onChange={(e)=>setNewPkgName(e.target.value)} 
-                    className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                  />
-                  <input 
-                    type="number" 
-                    placeholder="Price (৳)" 
-                    value={newPkgPrice} 
-                    onChange={(e)=>setNewPkgPrice(e.target.value)} 
-                    className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                  />
-                  <input 
-                    type="text" 
-                    placeholder="Validity (e.g. 30 Days)" 
-                    value={newPkgValidity} 
-                    onChange={(e)=>setNewPkgValidity(e.target.value)} 
-                    className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                  />
-                  <input 
-                    type="number" 
-                    placeholder="Daily Tasks Limit" 
-                    value={newPkgTasks} 
-                    onChange={(e)=>setNewPkgTasks(e.target.value)} 
-                    className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                  />
-                  <input 
-                    type="number" 
-                    placeholder="Daily Potential (৳)" 
-                    value={newPkgPotential} 
-                    onChange={(e)=>setNewPkgPotential(e.target.value)} 
-                    className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
-                  />
+              {/* Sub-Tab 5: User Control (Matching user screenshot style) */}
+              {adminSubTab === 'users' && (
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-200">Registered Users ({filteredUsers.length})</h3>
+                      <p className="text-xs text-slate-400 mt-0.5">Adjust wallet balances, inspect packages, or toggle account suspension.</p>
+                    </div>
+                    <div className="w-full sm:w-72">
+                      <input 
+                        type="text" 
+                        placeholder="🔍 Search name, phone, email..." 
+                        value={userSearchQuery}
+                        onChange={(e) => setUserSearchQuery(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 pt-2">
+                    {filteredUsers.length === 0 ? <p className="text-xs text-slate-500 text-center py-6">No users found.</p> : 
+                      filteredUsers.map(usr => (
+                        <UserAdminRow key={usr.id} usr={usr} db={db} />
+                      ))
+                    }
+                  </div>
+                </div>
+              )}
+
+              {/* Sub-Tab 6: Payment Numbers & Limits */}
+              {adminSubTab === 'gateways' && (
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6">
+                  <h3 className="text-lg font-semibold mb-2 text-slate-200">Payment Numbers & Withdrawal Limits</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                    <div>
+                      <label className="text-xs text-slate-400">bKash Personal</label>
+                      <div className="flex mt-1 space-x-2">
+                        <input 
+                          type="text" 
+                          value={gateways.bkash} 
+                          onChange={(e)=>setGateways({...gateways, bkash: e.target.value})} 
+                          className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-400">Nagad Personal</label>
+                      <div className="flex mt-1 space-x-2">
+                        <input 
+                          type="text" 
+                          value={gateways.nagad} 
+                          onChange={(e)=>setGateways({...gateways, nagad: e.target.value})} 
+                          className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-400">Rocket Personal</label>
+                      <div className="flex mt-1 space-x-2">
+                        <input 
+                          type="text" 
+                          value={gateways.rocket} 
+                          onChange={(e)=>setGateways({...gateways, rocket: e.target.value})} 
+                          className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-400">Binance ID</label>
+                      <div className="flex mt-1 space-x-2">
+                        <input 
+                          type="text" 
+                          value={gateways.binance} 
+                          onChange={(e)=>setGateways({...gateways, binance: e.target.value})} 
+                          className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-400">Minimum Withdrawal (৳)</label>
+                      <div className="flex mt-1 space-x-2">
+                        <input 
+                          type="number" 
+                          value={gateways.minWithdraw} 
+                          onChange={(e)=>setGateways({...gateways, minWithdraw: Number(e.target.value)})} 
+                          className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
                   <button 
-                    onClick={() => {
-                      if (!newPkgName || !newPkgPrice) return;
-                      const newP = {
-                        id: Date.now().toString(),
-                        name: newPkgName,
-                        price: Number(newPkgPrice),
-                        validity: newPkgValidity || '30 Days',
-                        dailyTasks: Number(newPkgTasks) || 5,
-                        dailyPotential: Number(newPkgPotential) || 100,
-                        desc: 'Customized membership plan via admin panel.',
-                        features: [`${newPkgTasks || 5} Daily Tasks`, `৳${newPkgPotential || 100} Daily Potential`, `${newPkgValidity || '30 Days'} Validity`, 'Instant Payouts']
-                      };
-                      setPackages([...packages, newP]);
-                      setNewPkgName('');
-                      setNewPkgPrice('');
-                      setNewPkgTasks('');
-                      setNewPkgPotential('');
-                      alert("Membership package added!");
-                    }}
-                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-sm font-semibold rounded text-white"
+                    onClick={handleSaveGateways}
+                    className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-sm font-bold rounded-xl text-white shadow-lg"
                   >
-                    Add Membership Plan
+                    Save All Payment Settings
                   </button>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {packages.map(pkg => (
-                    <div key={pkg.id} className="bg-slate-950 p-4 rounded-lg border border-slate-800 flex justify-between items-start">
-                      <div>
-                        <h4 className="font-bold text-amber-400">{pkg.name} - ৳{pkg.price} / {pkg.validity}</h4>
-                        <p className="text-xs text-slate-300 mt-1">Limit: {pkg.dailyTasks} Tasks | Potential: ৳{pkg.dailyPotential}</p>
-                      </div>
-                      <button 
-                        onClick={() => {
-                          setPackages(packages.filter(p => p.id !== pkg.id));
-                          alert("Package removed!");
-                        }}
-                        className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-xs rounded text-white"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Deposit Audit Requests */}
-              <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow">
-                <h3 className="text-lg font-semibold mb-4 text-slate-200">Deposit Audit Requests</h3>
-                <div className="space-y-3">
-                  {allDeposits.length === 0 ? <p className="text-sm text-slate-400">No deposit requests.</p> : 
-                    allDeposits.map(dep => (
-                      <div key={dep.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-lg border border-slate-800 gap-2">
-                        <div>
-                          <p className="text-sm font-medium text-slate-200">{dep.email} - ৳{dep.amount} ({dep.method}) [Target: {dep.targetTier || 'Direct Credit'}]</p>
-                          <p className="text-xs text-slate-400">TrxID: {dep.trxId} | Status: <span className="text-amber-400">{dep.status}</span></p>
-                        </div>
-                        {dep.status === 'Pending' && (
-                          <button 
-                            onClick={async () => {
-                              await updateDoc(doc(db, "deposits", dep.id), { status: "Approved" });
-                              const usrRef = doc(db, "users", dep.uid);
-                              const usrSnap = await getDoc(usrRef);
-                              if(usrSnap.exists()) {
-                                const currentDep = usrSnap.data().depositWallet || 0;
-                                await updateDoc(usrRef, { depositWallet: currentDep + dep.amount });
-                              }
-                              alert("Deposit approved and credited!");
-                            }}
-                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold rounded text-white"
-                          >
-                            Approve
-                          </button>
-                        )}
-                      </div>
-                    ))
-                  }
-                </div>
-              </div>
-
-              {/* Withdrawal Audit Requests */}
-              <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow">
-                <h3 className="text-lg font-semibold mb-4 text-slate-200">Withdrawal Audit Requests</h3>
-                <div className="space-y-3">
-                  {allWithdrawals.length === 0 ? <p className="text-sm text-slate-400">No withdrawal requests.</p> : 
-                    allWithdrawals.map(wit => (
-                      <div key={wit.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-lg border border-slate-800 gap-2">
-                        <div>
-                          <p className="text-sm font-medium text-slate-200">{wit.email} - ৳{wit.amount} ({wit.method})</p>
-                          <p className="text-xs text-slate-400">Account: {wit.account} | Status: <span className="text-amber-400">{wit.status}</span></p>
-                        </div>
-                        {wit.status === 'Pending' && (
-                          <div className="flex space-x-2">
-                            <button 
-                              onClick={async () => {
-                                await updateDoc(doc(db, "withdrawals", wit.id), { status: "Approved" });
-                                alert("Withdrawal approved!");
-                              }}
-                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold rounded text-white"
-                            >
-                              Approve
-                            </button>
-                            <button 
-                              onClick={async () => {
-                                await updateDoc(doc(db, "withdrawals", wit.id), { status: "Rejected" });
-                                const usrRef = doc(db, "users", wit.uid);
-                                const usrSnap = await getDoc(usrRef);
-                                if(usrSnap.exists()) {
-                                  const currentEarn = usrSnap.data().earningsWallet || 0;
-                                  await updateDoc(usrRef, { earningsWallet: currentEarn + wit.amount });
-                                }
-                                alert("Withdrawal rejected & refunded!");
-                              }}
-                              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-xs font-semibold rounded text-white"
-                            >
-                              Reject
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    ))
-                  }
-                </div>
-              </div>
-
-              {/* User Management */}
-              <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow">
-                <h3 className="text-lg font-semibold mb-4 text-slate-200">User Management & Balance Adjustment</h3>
-                <div className="space-y-4">
-                  {allUsers.length === 0 ? <p className="text-sm text-slate-400">No users found.</p> : 
-                    allUsers.map(usr => (
-                      <UserAdminRow key={usr.id} usr={usr} db={db} />
-                    ))
-                  }
-                </div>
-              </div>
+              )}
 
             </div>
           ) : activeTab === 'dashboard' ? (
@@ -1417,7 +1512,7 @@ export default function App() {
           <div className="flex flex-wrap items-center gap-4 text-center md:text-left">
             <span className="font-bold text-blue-400 text-sm">KODA Task</span>
             <span>•</span>
-            <span>Membership-Based Task Platform</span>
+            <span>Task-Based Earning Platform</span>
             <span>•</span>
             <span className="flex items-center space-x-1 text-emerald-400">
               <span>🛡️</span>
@@ -1596,44 +1691,44 @@ function UserAdminRow({ usr, db }) {
     <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
         <div>
-          <p className="text-sm font-medium text-slate-200">{usr.name} ({usr.email})</p>
-          <p className="text-xs text-slate-400">Phone: {usr.phone || 'N/A'} | Status: <span className={usr.status === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
+          <p className="text-sm font-medium text-slate-200">{usr.name || 'No Name'} ({usr.email})</p>
+          <p className="text-xs text-slate-400">Phone: {usr.phone || 'N/A'} | Package: <span className="text-amber-400">{usr.package || 'None'}</span> | Status: <span className={usr.status === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
         </div>
         {usr.email !== '1roxi1@gmail.com' && (
           <button 
             onClick={handleToggleBan}
             className={`px-3 py-1.5 text-xs font-semibold rounded-lg text-white ${usr.status === 'Banned' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}
           >
-            {usr.status === 'Banned' ? 'Unban' : 'Ban'}
+            {usr.status === 'Banned' ? 'Unban User' : 'Ban User'}
           </button>
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center pt-2 border-t border-slate-800">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center pt-3 border-t border-slate-800">
         <div>
-          <label className="text-[10px] text-slate-400">Deposit Wallet (৳)</label>
+          <label className="text-[10px] text-slate-400 uppercase tracking-wider">Deposit Wallet (৳)</label>
           <input 
             type="number" 
             value={depWallet} 
             onChange={(e)=>setDepWallet(e.target.value)} 
-            className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white"
+            className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
           />
         </div>
         <div>
-          <label className="text-[10px] text-slate-400">Earnings Wallet (৳)</label>
+          <label className="text-[10px] text-slate-400 uppercase tracking-wider">Earnings Wallet (৳)</label>
           <input 
             type="number" 
             value={earnWallet} 
             onChange={(e)=>setEarnWallet(e.target.value)} 
-            className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white"
+            className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
           />
         </div>
         <div className="flex items-end h-full pt-1 sm:pt-4">
           <button 
             onClick={handleUpdateBalance}
-            className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-xs font-semibold rounded-lg text-white shadow"
+            className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-xs font-bold rounded-lg text-white shadow"
           >
-            Update Balance
+            Update Balances
           </button>
         </div>
       </div>
