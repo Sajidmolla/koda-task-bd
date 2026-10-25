@@ -410,6 +410,8 @@ export default function App() {
         amount: amount,
         account: withdrawAccount,
         status: "Pending",
+        payoutTrxId: "—",
+        adminNote: "Pending review",
         timestamp: serverTimestamp()
       });
       const newEarnings = userData.earningsWallet - amount;
@@ -687,25 +689,51 @@ export default function App() {
                     <div className="space-y-3">
                       {allWithdrawals.length === 0 ? <p className="text-xs text-slate-400">No withdrawal requests.</p> : 
                         allWithdrawals.map(wit => (
-                          <div key={wit.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-xl border border-slate-800 gap-2">
+                          <div key={wit.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-xl border border-slate-800 gap-3">
                             <div>
                               <p className="text-sm font-medium text-slate-200">{wit.email} - ৳{wit.amount} ({wit.method})</p>
                               <p className="text-xs text-slate-400">Account: <span className="text-emerald-400 font-mono">{wit.account}</span> | Status: <span className="text-amber-400">{wit.status}</span></p>
                             </div>
+                            
+                            {/* Admin inputs for Payout TrxID and Admin Note */}
                             {wit.status === 'Pending' && (
-                              <div className="flex space-x-2">
+                              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-center">
+                                <input 
+                                  type="text" 
+                                  placeholder="Payout TrxID (e.g. PAY-12345)"
+                                  id={`trx-${wit.id}`}
+                                  defaultValue={`PAY-${Math.random().toString(36).substring(2, 9).toUpperCase()}`}
+                                  className="bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white w-full sm:w-48 font-mono"
+                                />
+                                <input 
+                                  type="text" 
+                                  placeholder="Note (e.g. Dispatched via bKash)"
+                                  id={`note-${wit.id}`}
+                                  defaultValue={`Dispatched via ${wit.method}`}
+                                  className="bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white w-full sm:w-48"
+                                />
                                 <button 
                                   onClick={async () => {
-                                    await updateDoc(doc(db, "withdrawals", wit.id), { status: "Approved" });
+                                    const trxInput = document.getElementById(`trx-${wit.id}`).value;
+                                    const noteInput = document.getElementById(`note-${wit.id}`).value;
+                                    await updateDoc(doc(db, "withdrawals", wit.id), { 
+                                      status: "Approved",
+                                      payoutTrxId: trxInput || "PAY-VERIFIED",
+                                      adminNote: noteInput || `Dispatched via ${wit.method}`
+                                    });
                                     alert("Withdrawal approved!");
                                   }}
-                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold rounded-lg text-white"
+                                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold rounded-lg text-white whitespace-nowrap"
                                 >
                                   Approve
                                 </button>
                                 <button 
                                   onClick={async () => {
-                                    await updateDoc(doc(db, "withdrawals", wit.id), { status: "Rejected" });
+                                    await updateDoc(doc(db, "withdrawals", wit.id), { 
+                                      status: "Rejected",
+                                      payoutTrxId: "—",
+                                      adminNote: "Rejected by admin"
+                                    });
                                     const usrRef = doc(db, "users", wit.uid);
                                     const usrSnap = await getDoc(usrRef);
                                     if(usrSnap.exists()) {
@@ -714,9 +742,9 @@ export default function App() {
                                     }
                                     alert("Withdrawal rejected & refunded!");
                                   }}
-                                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-xs font-semibold rounded-lg text-white"
+                                  className="px-3 py-2 bg-red-600 hover:bg-red-700 text-xs font-semibold rounded-lg text-white whitespace-nowrap"
                                 >
-                                  Reject & Refund
+                                  Reject
                                 </button>
                               </div>
                             )}
@@ -1285,7 +1313,7 @@ export default function App() {
               </div>
             </div>
           ) : activeTab === 'withdraw' ? (
-            <div className="space-y-6 max-w-4xl mx-auto">
+            <div className="space-y-6 max-w-5xl mx-auto">
               <div>
                 <p className="text-xs text-blue-400 font-medium">Mobile Banking Disbursement • bKash / Nagad / Rocket • Zero Unjustified Holds</p>
                 <h2 className="text-2xl md:text-3xl font-bold text-white tracking-wide mt-1">Wallet Cashout Gateway</h2>
@@ -1384,27 +1412,45 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Withdrawal Audit Log matching screenshot */}
+              {/* Withdrawal Audit Log matching screenshot design exactly */}
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4 mt-6">
                 <h3 className="text-lg font-semibold text-slate-200">Withdrawal Audit Log</h3>
-                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                  {myWithdrawals.length === 0 ? (
-                    <div className="text-center py-8 text-xs text-slate-500 border border-dashed border-slate-800 rounded-xl">
-                      No withdrawal requests logged yet.
-                    </div>
-                  ) : (
-                    myWithdrawals.map(w => (
-                      <div key={w.id} className="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center text-xs">
-                        <div>
-                          <p className="font-bold text-emerald-400">৳{w.amount} ({w.method})</p>
-                          <p className="text-slate-400 text-[10px]">Acc: {w.account}</p>
-                        </div>
-                        <span className={`font-semibold px-2 py-0.5 rounded text-[10px] ${w.status === 'Approved' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : w.status === 'Rejected' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}`}>
-                          {w.status}
-                        </span>
-                      </div>
-                    ))
-                  )}
+                
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-300">
+                    <thead>
+                      <tr className="border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[10px]">
+                        <th className="py-3 px-4">Gross</th>
+                        <th className="py-3 px-4">Net Disbursed</th>
+                        <th className="py-3 px-4">Status</th>
+                        <th className="py-3 px-4">Payout TrxID</th>
+                        <th className="py-3 px-4">Admin Note</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60 font-mono">
+                      {myWithdrawals.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" className="text-center py-8 text-slate-500 font-sans">
+                            No withdrawal requests logged yet.
+                          </td>
+                        </tr>
+                      ) : (
+                        myWithdrawals.map(w => (
+                          <tr key={w.id} className="hover:bg-slate-950/50 transition">
+                            <td className="py-3.5 px-4 text-white font-bold">৳{Number(w.amount).toFixed(2)}</td>
+                            <td className="py-3.5 px-4 text-cyan-400 font-bold">৳{Number(w.amount).toFixed(2)}</td>
+                            <td className="py-3.5 px-4 font-sans font-semibold">
+                              <span className={`${w.status === 'Approved' ? 'text-emerald-400' : w.status === 'Rejected' ? 'text-red-400' : 'text-amber-400'}`}>
+                                {w.status}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-slate-300">{w.payoutTrxId || '—'}</td>
+                            <td className="py-3.5 px-4 text-slate-400 font-sans">{w.adminNote || 'Pending review'}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
