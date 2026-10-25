@@ -61,16 +61,19 @@ export default function App() {
   const [depositMethod, setDepositMethod] = useState('bKash');
   const [depositAmount, setDepositAmount] = useState('');
   const [depositTrxId, setDepositTrxId] = useState('');
+  
+  // Withdrawal gateway states matching screenshot design
   const [withdrawMethod, setWithdrawMethod] = useState('bKash');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAccount, setWithdrawAccount] = useState('');
 
-  // Gateways synced with Firestore
+  // Gateways & Config synced with Firestore
   const [gateways, setGateways] = useState({
     bkash: "01737966207",
     nagad: "01737966207",
     rocket: "01737966207",
-    binance: "KODA-PAY-USDT-ID"
+    binance: "KODA-PAY-USDT-ID",
+    minWithdraw: 100
   });
 
   // Default Tasks with configurable timer (in seconds) and link
@@ -196,13 +199,15 @@ export default function App() {
     // Fetch gateways in real-time from Firestore
     const unsubGateways = onSnapshot(doc(db, "settings", "gateways"), (docSnap) => {
       if (docSnap.exists()) {
-        setGateways(docSnap.data());
+        const data = docSnap.data();
+        setGateways(prev => ({ ...prev, ...data }));
       } else {
         setDoc(doc(db, "settings", "gateways"), {
           bkash: "01737966207",
           nagad: "01737966207",
           rocket: "01737966207",
-          binance: "KODA-PAY-USDT-ID"
+          binance: "KODA-PAY-USDT-ID",
+          minWithdraw: 100
         });
       }
     });
@@ -349,7 +354,7 @@ export default function App() {
   const handleSaveGateways = async () => {
     try {
       await setDoc(doc(db, "settings", "gateways"), gateways);
-      alert("Payment gateways updated successfully!");
+      alert("Payment gateways and minimum withdrawal updated successfully!");
     } catch (err) {
       alert("Error updating gateways: " + err.message);
     }
@@ -379,7 +384,12 @@ export default function App() {
   const handleWithdrawSubmit = async (e) => {
     e.preventDefault();
     const amount = Number(withdrawAmount);
+    const minW = Number(gateways.minWithdraw) || 100;
     if (!amount || !withdrawAccount) return;
+    if (amount < minW) {
+      alert(`Minimum withdrawal is ৳${minW}.`);
+      return;
+    }
     if (amount > (userData?.earningsWallet || 0)) {
       alert("Insufficient earnings balance!");
       return;
@@ -559,10 +569,10 @@ export default function App() {
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-indigo-400">Admin Control Panel</h2>
               
-              {/* Payment Gateways (Fully customizable & saved to Firestore) */}
+              {/* Payment Gateways & Minimum Withdrawal Config */}
               <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow">
-                <h3 className="text-lg font-semibold mb-4 text-slate-200">Manage Payment Gateways</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                <h3 className="text-lg font-semibold mb-4 text-slate-200">Manage Payment Gateways & Minimum Withdrawal</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                   <div>
                     <label className="text-xs text-slate-400">bKash Personal</label>
                     <div className="flex mt-1 space-x-2">
@@ -611,12 +621,23 @@ export default function App() {
                       <button onClick={()=>copyToClipboard(gateways.binance)} className="px-3 bg-blue-600 text-xs rounded text-white">Copy</button>
                     </div>
                   </div>
+                  <div>
+                    <label className="text-xs text-slate-400">Minimum Withdrawal (৳)</label>
+                    <div className="flex mt-1 space-x-2">
+                      <input 
+                        type="number" 
+                        value={gateways.minWithdraw} 
+                        onChange={(e)=>setGateways({...gateways, minWithdraw: Number(e.target.value)})} 
+                        className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                      />
+                    </div>
+                  </div>
                 </div>
                 <button 
                   onClick={handleSaveGateways}
                   className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold rounded-lg text-white shadow"
                 >
-                  Save Gateway Numbers
+                  Save Gateway Numbers & Settings
                 </button>
               </div>
 
@@ -1010,166 +1031,223 @@ export default function App() {
                 <p className="text-xs text-slate-400">Our support team is available 24/7 to help you out with any payment or account issues.</p>
                 <div className="pt-4 space-y-3">
                   <a 
-                    href="https://t.me/" 
+                    href="https://t.me/Yours_support_admin" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="block w-full py-3 bg-sky-600 hover:bg-sky-700 rounded-xl font-bold text-white text-sm shadow-lg transition"
                   >
-                    💬 Join Telegram Support Channel
-                  </a>
-                  <a 
-                    href="https://wa.me/" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="block w-full py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-bold text-white text-sm shadow-lg transition"
-                  >
-                    📱 Contact WhatsApp Support
+                    💬 Join Telegram Support (t.me/Yours_support_admin)
                   </a>
                 </div>
               </div>
             </div>
           ) : activeTab === 'wallet' ? (
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-blue-400 flex items-center space-x-2">
-                <span>💳</span>
-                <span>Wallet & Transactions</span>
-              </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4 shadow-xl">
-                  <h3 className="text-lg font-semibold text-slate-200">Add Deposit</h3>
-                  <div className="p-3.5 bg-slate-950 rounded-xl border border-slate-800 text-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                    <div>
-                      <p className="text-xs text-slate-400 mb-1">Send money to our company personal number:</p>
-                      <p className="font-bold text-blue-400">{depositMethod}: {gateways[depositMethod.toLowerCase()] || gateways.bkash}</p>
-                    </div>
-                    <button 
-                      onClick={() => copyToClipboard(gateways[depositMethod.toLowerCase()] || gateways.bkash)}
-                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-xs rounded-lg text-white font-medium whitespace-nowrap"
-                    >
-                      Copy Number
-                    </button>
+              {/* Header subtitle matching screenshot */}
+              <div>
+                <p className="text-xs text-blue-400 font-medium">Mobile Banking Disbursement • bKash / Nagad / Rocket • Zero Unjustified Holds</p>
+                <h2 className="text-2xl md:text-3xl font-bold text-white tracking-wide mt-1">Wallet Cashout Gateway</h2>
+                <p className="text-xs text-slate-400 mt-0.5">Transfer earnings directly to your personal mobile banking account. Requests are audited and settled with verifiable reference IDs.</p>
+              </div>
+
+              {/* Main Cashout & Deposit grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Cashout / Withdrawal Gateway matching screenshot design */}
+                <div className="lg:col-span-2 bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6">
+                  <div className="flex justify-between items-center bg-slate-950 p-4 rounded-xl border border-slate-800">
+                    <span className="text-xs text-slate-400">Available Wallet Balance</span>
+                    <span className="text-2xl font-extrabold text-white">৳{(userData?.earningsWallet || 0).toFixed(2)}</span>
                   </div>
-                  <form onSubmit={handleDepositSubmit} className="space-y-3">
+
+                  <form onSubmit={handleWithdrawSubmit} className="space-y-5">
                     <div>
-                      <label className="text-xs text-slate-400">Method</label>
-                      <select 
-                        value={depositMethod} 
-                        onChange={(e)=>setDepositMethod(e.target.value)}
-                        className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
-                      >
-                        <option value="bKash">bKash</option>
-                        <option value="Nagad">Nagad</option>
-                        <option value="Rocket">Rocket</option>
-                        <option value="Binance">Binance</option>
-                      </select>
+                      <label className="text-xs text-slate-400 block mb-2">Payout Provider</label>
+                      <div className="grid grid-cols-3 gap-3">
+                        {['bKash', 'Nagad', 'Rocket'].map((m) => (
+                          <button
+                            type="button"
+                            key={m}
+                            onClick={() => setWithdrawMethod(m)}
+                            className={`py-2.5 text-xs font-semibold rounded-xl border transition ${withdrawMethod === m ? 'bg-blue-600 border-blue-500 text-white shadow-lg' : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'}`}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
                     </div>
+
                     <div>
-                      <label className="text-xs text-slate-400">Amount (৳)</label>
+                      <label className="text-xs text-slate-400 block mb-1">Personal Recipient Mobile Number *</label>
                       <input 
-                        type="number" 
-                        required 
-                        value={depositAmount} 
-                        onChange={(e)=>setDepositAmount(e.target.value)} 
-                        className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
+                        type="text" 
+                        required
+                        placeholder="01700000000"
+                        value={withdrawAccount} 
+                        onChange={(e)=>setWithdrawAccount(e.target.value)} 
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:border-blue-500 focus:outline-none"
                       />
                     </div>
+
                     <div>
-                      <label className="text-xs text-slate-400">Transaction ID (TrxID)</label>
+                      <label className="text-xs text-slate-400 block mb-1">Cashout Amount (BDT) *</label>
+                      <input 
+                        type="number" 
+                        required
+                        placeholder={`Min ৳${gateways.minWithdraw || 100}, Max ৳25000`}
+                        value={withdrawAmount} 
+                        onChange={(e)=>setWithdrawAmount(e.target.value)} 
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:border-blue-500 focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Calculation breakdown */}
+                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 text-xs">
+                      <div className="flex justify-between text-slate-400">
+                        <span>Requested Gross:</span>
+                        <span className="text-white font-mono">৳{Number(withdrawAmount || 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-slate-400">
+                        <span>Processing Fee (0%):</span>
+                        <span className="text-red-400 font-mono">-৳0.00</span>
+                      </div>
+                      <div className="flex justify-between text-slate-200 font-bold pt-2 border-t border-slate-800">
+                        <span>Net Receivable:</span>
+                        <span className="text-emerald-400 font-mono text-sm">৳{Number(withdrawAmount || 0).toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    <button type="submit" className="w-full py-3.5 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-blue-500 rounded-xl font-bold text-white text-sm shadow-lg shadow-blue-900/20 transition flex items-center justify-center space-x-2">
+                      <span>↗ Submit Cashout Request</span>
+                    </button>
+                  </form>
+                </div>
+
+                {/* Withdrawal Terms Sidebar matching screenshot */}
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6 h-fit">
+                  <div className="flex items-center space-x-2 text-blue-400 text-sm font-semibold border-b border-slate-800 pb-3">
+                    <span>🛡️</span>
+                    <span>WITHDRAWAL TERMS</span>
+                  </div>
+                  
+                  <div className="space-y-4 text-xs text-slate-400">
+                    <div>
+                      <p className="font-bold text-slate-200 mb-0.5">Threshold Policy</p>
+                      <p>Minimum withdrawal is ৳{gateways.minWithdraw || 100}. Requests below this threshold cannot be processed.</p>
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-200 mb-0.5">Escrow & Refund Safety</p>
+                      <p>Funds are held safely in escrow during verification. In the rare event of rejection, funds return immediately to your balance.</p>
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-200 mb-0.5">Reference ID Tracking</p>
+                      <p>Every payout is logged with a verifiable TrxID accessible in your audit log below.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Deposit Section Box */}
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4 mt-6">
+                <h3 className="text-lg font-semibold text-slate-200">Add Deposit to Deposit Wallet</h3>
+                <div className="p-3.5 bg-slate-950 rounded-xl border border-slate-800 text-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div>
+                    <p className="text-xs text-slate-400 mb-1">Send money to our company personal number:</p>
+                    <p className="font-bold text-blue-400">{depositMethod}: {gateways[depositMethod.toLowerCase()] || gateways.bkash}</p>
+                  </div>
+                  <button 
+                    onClick={() => copyToClipboard(gateways[depositMethod.toLowerCase()] || gateways.bkash)}
+                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-xs rounded-lg text-white font-medium whitespace-nowrap"
+                  >
+                    Copy Number
+                  </button>
+                </div>
+                <form onSubmit={handleDepositSubmit} className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                  <div>
+                    <label className="text-xs text-slate-400">Method</label>
+                    <select 
+                      value={depositMethod} 
+                      onChange={(e)=>setDepositMethod(e.target.value)}
+                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
+                    >
+                      <option value="bKash">bKash</option>
+                      <option value="Nagad">Nagad</option>
+                      <option value="Rocket">Rocket</option>
+                      <option value="Binance">Binance</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400">Amount (৳)</label>
+                    <input 
+                      type="number" 
+                      required 
+                      value={depositAmount} 
+                      onChange={(e)=>setDepositAmount(e.target.value)} 
+                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400">Transaction ID (TrxID)</label>
+                    <div className="flex mt-1 space-x-2">
                       <input 
                         type="text" 
                         required 
                         value={depositTrxId} 
                         onChange={(e)=>setDepositTrxId(e.target.value)} 
-                        className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
+                        className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
                       />
+                      <button type="submit" className="px-4 bg-blue-600 hover:bg-blue-700 text-xs rounded-lg text-white font-bold whitespace-nowrap">
+                        Deposit
+                      </button>
                     </div>
-                    <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold text-white text-sm shadow-lg">
-                      Submit Deposit
-                    </button>
-                  </form>
-                </div>
+                  </div>
+                </form>
+              </div>
 
-                <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4 shadow-xl">
-                  <h3 className="text-lg font-semibold text-slate-200">Request Withdrawal</h3>
-                  <form onSubmit={handleWithdrawSubmit} className="space-y-3">
-                    <div>
-                      <label className="text-xs text-slate-400">Method</label>
-                      <select 
-                        value={withdrawMethod} 
-                        onChange={(e)=>setWithdrawMethod(e.target.value)}
-                        className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
-                      >
-                        <option value="bKash">bKash</option>
-                        <option value="Nagad">Nagad</option>
-                        <option value="Rocket">Rocket</option>
-                      </select>
+              {/* Withdrawal Audit Log matching screenshot */}
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4">
+                <h3 className="text-lg font-semibold text-slate-200">Withdrawal Audit Log</h3>
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {myWithdrawals.length === 0 ? (
+                    <div className="text-center py-8 text-xs text-slate-500 border border-dashed border-slate-800 rounded-xl">
+                      No withdrawal requests logged yet.
                     </div>
-                    <div>
-                      <label className="text-xs text-slate-400">Amount (৳)</label>
-                      <input 
-                        type="number" 
-                        required 
-                        value={withdrawAmount} 
-                        onChange={(e)=>setWithdrawAmount(e.target.value)} 
-                        className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-slate-400">Account Number</label>
-                      <input 
-                        type="text" 
-                        required 
-                        value={withdrawAccount} 
-                        onChange={(e)=>setWithdrawAccount(e.target.value)} 
-                        className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
-                      />
-                    </div>
-                    <button type="submit" className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-bold text-white text-sm shadow-lg">
-                      Request Withdraw
-                    </button>
-                  </form>
+                  ) : (
+                    myWithdrawals.map(w => (
+                      <div key={w.id} className="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center text-xs">
+                        <div>
+                          <p className="font-bold text-emerald-400">৳{w.amount} ({w.method})</p>
+                          <p className="text-slate-400 text-[10px]">Acc: {w.account}</p>
+                        </div>
+                        <span className={`font-semibold px-2 py-0.5 rounded text-[10px] ${w.status === 'Approved' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : w.status === 'Rejected' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}`}>
+                          {w.status}
+                        </span>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
 
-              {/* User History */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4 shadow-xl">
-                  <h3 className="text-lg font-semibold text-slate-200">My Deposit History</h3>
-                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                    {myDeposits.length === 0 ? <p className="text-xs text-slate-400">No deposit history.</p> :
-                      myDeposits.map(d => (
-                        <div key={d.id} className="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center text-xs">
-                          <div>
-                            <p className="font-bold text-blue-400">৳{d.amount} ({d.method})</p>
-                            <p className="text-slate-400 text-[10px]">TrxID: {d.trxId}</p>
-                          </div>
-                          <span className={`font-semibold px-2 py-0.5 rounded text-[10px] ${d.status === 'Approved' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : d.status === 'Rejected' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}`}>
-                            {d.status}
-                          </span>
+              {/* Deposit History */}
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4">
+                <h3 className="text-lg font-semibold text-slate-200">Deposit History Log</h3>
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {myDeposits.length === 0 ? (
+                    <div className="text-center py-8 text-xs text-slate-500 border border-dashed border-slate-800 rounded-xl">
+                      No deposit requests logged yet.
+                    </div>
+                  ) : (
+                    myDeposits.map(d => (
+                      <div key={d.id} className="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center text-xs">
+                        <div>
+                          <p className="font-bold text-blue-400">৳{d.amount} ({d.method})</p>
+                          <p className="text-slate-400 text-[10px]">TrxID: {d.trxId}</p>
                         </div>
-                      ))
-                    }
-                  </div>
-                </div>
-
-                <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4 shadow-xl">
-                  <h3 className="text-lg font-semibold text-slate-200">My Withdrawal History</h3>
-                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                    {myWithdrawals.length === 0 ? <p className="text-xs text-slate-400">No withdrawal history.</p> :
-                      myWithdrawals.map(w => (
-                        <div key={w.id} className="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center text-xs">
-                          <div>
-                            <p className="font-bold text-emerald-400">৳{w.amount} ({w.method})</p>
-                            <p className="text-slate-400 text-[10px]">Acc: {w.account}</p>
-                          </div>
-                          <span className={`font-semibold px-2 py-0.5 rounded text-[10px] ${w.status === 'Approved' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : w.status === 'Rejected' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}`}>
-                            {w.status}
-                          </span>
-                        </div>
-                      ))
-                    }
-                  </div>
+                        <span className={`font-semibold px-2 py-0.5 rounded text-[10px] ${d.status === 'Approved' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : d.status === 'Rejected' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}`}>
+                          {d.status}
+                        </span>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -1338,7 +1416,7 @@ export default function App() {
 
               <button 
                 type="submit" 
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold text-white shadow-lg"
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-white shadow-lg"
               >
                 {authMode === 'login' ? 'Sign In' : 'Register Account'}
               </button>
@@ -1414,7 +1492,7 @@ function UserAdminRow({ usr, db }) {
           <input 
             type="number" 
             value={depWallet} 
-            onChange={(e)=>setDepWorkspace ? setDepWallet(e.target.value) : setDepWallet(e.target.value)} 
+            onChange={(e)=>setDepWallet(e.target.value)} 
             className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white"
           />
         </div>
