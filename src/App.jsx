@@ -57,11 +57,13 @@ export default function App() {
   const [profileName, setProfileName] = useState('');
   const [profilePhone, setProfilePhone] = useState('');
 
+  // Deposit gateway states matching screenshot design
   const [depositMethod, setDepositMethod] = useState('bKash');
   const [depositAmount, setDepositAmount] = useState('');
   const [depositTrxId, setDepositTrxId] = useState('');
+  const [targetTier, setTargetTier] = useState('Direct Balance Credit (No Auto-Package)');
   
-  // Withdrawal gateway states matching screenshot design
+  // Withdrawal gateway states matching previous screenshot design
   const [withdrawMethod, setWithdrawMethod] = useState('bKash');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAccount, setWithdrawAccount] = useState('');
@@ -374,10 +376,11 @@ export default function App() {
         method: depositMethod,
         amount: Number(depositAmount),
         trxId: depositTrxId,
+        targetTier: targetTier,
         status: "Pending",
         timestamp: serverTimestamp()
       });
-      alert("Deposit request submitted successfully! Admin will review soon.");
+      alert("Deposit reference submitted successfully! Admin will verify and credit soon.");
       setDepositAmount('');
       setDepositTrxId('');
     } catch (err) {
@@ -797,7 +800,7 @@ export default function App() {
                   allDeposits.map(dep => (
                     <div key={dep.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-lg border border-slate-800 gap-2">
                       <div>
-                        <p className="text-sm font-medium text-slate-200">{dep.email} - ৳{dep.amount} ({dep.method})</p>
+                        <p className="text-sm font-medium text-slate-200">{dep.email} - ৳{dep.amount} ({dep.method}) [Target: {dep.targetTier || 'Direct Credit'}]</p>
                         <p className="text-xs text-slate-400">TrxID: {dep.trxId} | Status: <span className="text-amber-400">{dep.status}</span></p>
                       </div>
                       {dep.status === 'Pending' && (
@@ -810,7 +813,7 @@ export default function App() {
                               const currentDep = usrSnap.data().depositWallet || 0;
                               await updateDoc(usrRef, { depositWallet: currentDep + dep.amount });
                             }
-                            alert("Deposit approved!");
+                            alert("Deposit approved and credited!");
                           }}
                           className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold rounded text-white"
                         >
@@ -1040,62 +1043,136 @@ export default function App() {
             </div>
           </div>
         ) : activeTab === 'deposit' ? (
-          <div className="space-y-6 max-w-2xl mx-auto">
-            <h2 className="text-2xl font-bold text-blue-400 flex items-center space-x-2">
-              <span>💳</span>
-              <span>Add Deposit to Deposit Wallet</span>
-            </h2>
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4">
-              <div className="p-3.5 bg-slate-950 rounded-xl border border-slate-800 text-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div className="space-y-6 max-w-5xl mx-auto">
+            <div>
+              <p className="text-xs text-blue-400 font-medium">Manual Gateway • Personal Account Verification • Deduplication Indexed</p>
+              <h2 className="text-2xl md:text-3xl font-bold text-white tracking-wide mt-1">Deposit Verification Gateway</h2>
+              <p className="text-xs text-slate-400 mt-0.5">Transfer to our verified personal line, submit your Transaction ID (TrxID), and balance or package will be credited automatically.</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Column: Select Provider & Official Number */}
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6">
                 <div>
-                  <p className="text-xs text-slate-400 mb-1">Send money to our company personal number:</p>
-                  <p className="font-bold text-blue-400">{depositMethod}: {gateways[depositMethod.toLowerCase()] || gateways.bkash}</p>
+                  <label className="text-xs text-slate-400 block mb-2 font-medium">1. Select Financial Provider</label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {['bKash', 'Nagad', 'Rocket'].map((m) => (
+                      <button
+                        type="button"
+                        key={m}
+                        onClick={() => setDepositMethod(m)}
+                        className={`py-3 text-xs font-semibold rounded-xl border transition flex flex-col items-center justify-center space-y-1 ${depositMethod === m ? 'bg-blue-600 border-blue-500 text-white shadow-lg' : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'}`}
+                      >
+                        <span className="font-bold">{m}</span>
+                        <span className="text-[10px] opacity-75">Personal</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <button 
-                  onClick={() => copyToClipboard(gateways[depositMethod.toLowerCase()] || gateways.bkash)}
-                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-xs rounded-lg text-white font-medium whitespace-nowrap"
-                >
-                  Copy Number
-                </button>
+
+                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-slate-400">Official {depositMethod} Personal Line:</span>
+                    <span className="text-xs text-emerald-400 font-semibold flex items-center space-x-1">
+                      <span>●</span>
+                      <span>Verified Active</span>
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-800">
+                    <span className="text-lg md:text-xl font-extrabold font-mono text-white tracking-wider">
+                      {gateways[depositMethod.toLowerCase()] || gateways.bkash}
+                    </span>
+                    <button 
+                      onClick={() => copyToClipboard(gateways[depositMethod.toLowerCase()] || gateways.bkash)}
+                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs rounded-lg text-white font-medium flex items-center space-x-1 border border-slate-700"
+                    >
+                      <span>📋</span>
+                      <span>Copy</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-xs text-slate-400">
+                  <p className="text-slate-300 font-semibold mb-1">Instructions:</p>
+                  <p>01. Open your {depositMethod} App and choose <strong className="text-slate-200">Send Money</strong>.</p>
+                  <p>02. Send exact amount to <strong className="text-blue-400 font-mono">{gateways[depositMethod.toLowerCase()] || gateways.bkash}</strong>.</p>
+                  <p>03. Copy the returned <strong className="text-slate-200">Transaction ID (TrxID)</strong> and complete the verification form on the right.</p>
+                </div>
               </div>
-              <form onSubmit={handleDepositSubmit} className="space-y-4">
-                <div>
-                  <label className="text-xs text-slate-400">Method</label>
-                  <select 
-                    value={depositMethod} 
-                    onChange={(e)=>setDepositMethod(e.target.value)}
-                    className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
-                  >
-                    <option value="bKash">bKash</option>
-                    <option value="Nagad">Nagad</option>
-                    <option value="Rocket">Rocket</option>
-                    <option value="Binance">Binance</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs text-slate-400">Amount (৳)</label>
-                  <input 
-                    type="number" 
-                    required 
-                    value={depositAmount} 
-                    onChange={(e)=>setDepositAmount(e.target.value)} 
-                    className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-400">Transaction ID (TrxID)</label>
-                  <input 
-                    type="text" 
-                    required 
-                    value={depositTrxId} 
-                    onChange={(e)=>setDepositTrxId(e.target.value)} 
-                    className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
-                  />
-                </div>
-                <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold text-white text-sm shadow-lg">
-                  Submit Deposit Request
-                </button>
-              </form>
+
+              {/* Right Column: Submit Reference Form */}
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl flex flex-col justify-between">
+                <form onSubmit={handleDepositSubmit} className="space-y-5">
+                  <div>
+                    <label className="text-xs text-slate-400 block mb-1 font-medium">2. Submit Transaction Reference</label>
+                    <label className="text-[11px] text-slate-400 block mb-1.5">Target Membership Tier (Optional)</label>
+                    <select
+                      value={targetTier}
+                      onChange={(e) => setTargetTier(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs md:text-sm text-white focus:border-blue-500 focus:outline-none"
+                    >
+                      <option value="Direct Balance Credit (No Auto-Package)">Direct Balance Credit (No Auto-Package)</option>
+                      {packages.map(p => (
+                        <option key={p.id} value={`${p.name} — ৳${p.price}`}>
+                          {p.name} — ৳{p.price} ({p.dailyTasks} Daily Tasks)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-slate-400 block mb-1">Deposit Amount (BDT) *</label>
+                    <input 
+                      type="number" 
+                      required 
+                      placeholder="e.g. 500"
+                      value={depositAmount} 
+                      onChange={(e)=>setDepositAmount(e.target.value)} 
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:border-blue-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-slate-400 block mb-1">Transaction ID (TrxID) *</label>
+                    <input 
+                      type="text" 
+                      required 
+                      placeholder="e.g. 9N87A65B43"
+                      value={depositTrxId} 
+                      onChange={(e)=>setDepositTrxId(e.target.value)} 
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white font-mono focus:border-blue-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <button type="submit" className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 rounded-xl font-bold text-white text-sm shadow-lg shadow-emerald-900/20 transition flex items-center justify-center space-x-2">
+                    <span>🛡️ Submit Deposit Reference</span>
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            {/* Deposit Audit Log matching screenshot */}
+            <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4">
+              <h3 className="text-lg font-semibold text-slate-200">Deposit Audit Log</h3>
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                {myDeposits.length === 0 ? (
+                  <div className="text-center py-8 text-xs text-slate-500 border border-dashed border-slate-800 rounded-xl">
+                    No deposits recorded yet.
+                  </div>
+                ) : (
+                  myDeposits.map(d => (
+                    <div key={d.id} className="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center text-xs">
+                      <div>
+                        <p className="font-bold text-blue-400">৳{d.amount} ({d.method})</p>
+                        <p className="text-slate-400 text-[10px]">TrxID: {d.trxId} | Target: {d.targetTier || 'Direct Credit'}</p>
+                      </div>
+                      <span className={`font-semibold px-2 py-0.5 rounded text-[10px] ${d.status === 'Approved' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : d.status === 'Rejected' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}`}>
+                        {d.status}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         ) : activeTab === 'withdraw' ? (
