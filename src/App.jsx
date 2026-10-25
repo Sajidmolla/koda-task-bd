@@ -62,7 +62,8 @@ export default function App() {
   const [depositMethod, setDepositMethod] = useState('bKash');
   const [depositAmount, setDepositAmount] = useState('');
   const [depositTrxId, setDepositTrxId] = useState('');
-  const [targetTier, setTargetTier] = useState('Direct Balance Credit (No Auto-Package)');
+  const [senderPhone, setSenderPhone] = useState('');
+  const [targetTier, setTargetTier] = useState('Direct Balance');
   
   // Withdrawal gateway states
   const [withdrawMethod, setWithdrawMethod] = useState('bKash');
@@ -369,7 +370,7 @@ export default function App() {
 
   const handleDepositSubmit = async (e) => {
     e.preventDefault();
-    if (!depositAmount || !depositTrxId) return;
+    if (!depositAmount || !depositTrxId || !senderPhone) return;
     try {
       await addDoc(collection(db, "deposits"), {
         uid: user.uid,
@@ -377,13 +378,16 @@ export default function App() {
         method: depositMethod,
         amount: Number(depositAmount),
         trxId: depositTrxId,
+        senderPhone: senderPhone,
         targetTier: targetTier,
-        status: "Pending",
+        status: "Pending Verification",
+        adminNote: "—",
         timestamp: serverTimestamp()
       });
       alert("Deposit reference submitted successfully! Admin will verify and credit soon.");
       setDepositAmount('');
       setDepositTrxId('');
+      setSenderPhone('');
     } catch (err) {
       alert("Error: " + err.message);
     }
@@ -477,7 +481,7 @@ export default function App() {
     u.phone?.includes(userSearchQuery)
   );
 
-  const pendingDepositsCount = allDeposits.filter(d => d.status === 'Pending').length;
+  const pendingDepositsCount = allDeposits.filter(d => d.status === 'Pending Verification' || d.status === 'Pending').length;
   const pendingWithdrawalsCount = allWithdrawals.filter(w => w.status === 'Pending').length;
   const totalPendingFinance = pendingDepositsCount + pendingWithdrawalsCount;
 
@@ -659,9 +663,9 @@ export default function App() {
                           <div key={dep.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-xl border border-slate-800 gap-2">
                             <div>
                               <p className="text-sm font-medium text-slate-200">{dep.email} - ৳{dep.amount} ({dep.method}) [Target: {dep.targetTier || 'Direct Credit'}]</p>
-                              <p className="text-xs text-slate-400">TrxID: <span className="text-blue-400 font-mono">{dep.trxId}</span> | Status: <span className="text-amber-400">{dep.status}</span></p>
+                              <p className="text-xs text-slate-400">TrxID: <span className="text-blue-400 font-mono">{dep.trxId}</span> | Sender Phone: <span className="text-emerald-400 font-mono">{dep.senderPhone || 'N/A'}</span> | Status: <span className="text-amber-400">{dep.status}</span></p>
                             </div>
-                            {dep.status === 'Pending' && (
+                            {(dep.status === 'Pending Verification' || dep.status === 'Pending') && (
                               <button 
                                 onClick={async () => {
                                   await updateDoc(doc(db, "deposits", dep.id), { status: "Approved" });
@@ -695,7 +699,6 @@ export default function App() {
                               <p className="text-xs text-slate-400">Account: <span className="text-emerald-400 font-mono">{wit.account}</span> | Status: <span className="text-amber-400">{wit.status}</span></p>
                             </div>
                             
-                            {/* Admin inputs for Payout TrxID and Admin Note */}
                             {wit.status === 'Pending' && (
                               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-center">
                                 <input 
@@ -1237,18 +1240,18 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Right Column: Submit Reference Form */}
+                {/* Right Column: Submit Reference Form with Sender Phone */}
                 <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl flex flex-col justify-between">
-                  <form onSubmit={handleDepositSubmit} className="space-y-5">
+                  <form onSubmit={handleDepositSubmit} className="space-y-4">
                     <div>
                       <label className="text-xs text-slate-400 block mb-1 font-medium">2. Submit Transaction Reference</label>
-                      <label className="text-[11px] text-slate-400 block mb-1.5">Target Membership Tier (Optional)</label>
+                      <label className="text-[11px] text-slate-400 block mb-1">Target Membership Tier (Optional)</label>
                       <select
                         value={targetTier}
                         onChange={(e) => setTargetTier(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs md:text-sm text-white focus:border-blue-500 focus:outline-none"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:border-blue-500 focus:outline-none"
                       >
-                        <option value="Direct Balance Credit (No Auto-Package)">Direct Balance Credit (No Auto-Package)</option>
+                        <option value="Direct Balance">Direct Balance</option>
                         {packages.map(p => (
                           <option key={p.id} value={`${p.name} — ৳${p.price}`}>
                             {p.name} — ৳{p.price} ({p.dailyTasks} Daily Tasks)
@@ -1258,14 +1261,26 @@ export default function App() {
                     </div>
 
                     <div>
+                      <label className="text-xs text-slate-400 block mb-1">Sender Mobile Number (From which you sent money) *</label>
+                      <input 
+                        type="text" 
+                        required 
+                        placeholder="01700000000"
+                        value={senderPhone} 
+                        onChange={(e)=>setSenderPhone(e.target.value)} 
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:border-blue-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
                       <label className="text-xs text-slate-400 block mb-1">Deposit Amount (BDT) *</label>
                       <input 
                         type="number" 
                         required 
-                        placeholder="e.g. 500"
+                        placeholder="500"
                         value={depositAmount} 
                         onChange={(e)=>setDepositAmount(e.target.value)} 
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:border-blue-500 focus:outline-none"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:border-blue-500 focus:outline-none"
                       />
                     </div>
 
@@ -1274,10 +1289,10 @@ export default function App() {
                       <input 
                         type="text" 
                         required 
-                        placeholder="e.g. 9N87A65B43"
+                        placeholder="SADFDF"
                         value={depositTrxId} 
                         onChange={(e)=>setDepositTrxId(e.target.value)} 
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white font-mono focus:border-blue-500 focus:outline-none"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white font-mono uppercase focus:border-blue-500 focus:outline-none"
                       />
                     </div>
 
@@ -1288,32 +1303,54 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Deposit Audit Log matching screenshot */}
+              {/* Deposit Audit Log matching user screenshot design */}
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4">
                 <h3 className="text-lg font-semibold text-slate-200">Deposit Audit Log</h3>
-                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                  {myDeposits.length === 0 ? (
-                    <div className="text-center py-8 text-xs text-slate-500 border border-dashed border-slate-800 rounded-xl">
-                      No deposits recorded yet.
-                    </div>
-                  ) : (
-                    myDeposits.map(d => (
-                      <div key={d.id} className="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center text-xs">
-                        <div>
-                          <p className="font-bold text-blue-400">৳{d.amount} ({d.method})</p>
-                          <p className="text-slate-400 text-[10px]">TrxID: {d.trxId} | Target: {d.targetTier || 'Direct Credit'}</p>
-                        </div>
-                        <span className={`font-semibold px-2 py-0.5 rounded text-[10px] ${d.status === 'Approved' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : d.status === 'Rejected' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}`}>
-                          {d.status}
-                        </span>
-                      </div>
-                    ))
-                  )}
+                
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-300">
+                    <thead>
+                      <tr className="border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[10px]">
+                        <th className="py-3 px-4">TrxID</th>
+                        <th className="py-3 px-4">Method</th>
+                        <th className="py-3 px-4">Sender Phone</th>
+                        <th className="py-3 px-4">Amount</th>
+                        <th className="py-3 px-4">Package Target</th>
+                        <th className="py-3 px-4">Status</th>
+                        <th className="py-3 px-4">Admin Note</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60 font-mono">
+                      {myDeposits.length === 0 ? (
+                        <tr>
+                          <td colSpan="7" className="text-center py-8 text-slate-500 font-sans">
+                            No deposits recorded yet.
+                          </td>
+                        </tr>
+                      ) : (
+                        myDeposits.map(d => (
+                          <tr key={d.id} className="hover:bg-slate-950/50 transition">
+                            <td className="py-3.5 px-4 text-white font-bold">{d.trxId}</td>
+                            <td className="py-3.5 px-4 font-sans">{d.method}</td>
+                            <td className="py-3.5 px-4 text-slate-300">{d.senderPhone || '—'}</td>
+                            <td className="py-3.5 px-4 text-emerald-400 font-bold font-sans">৳{d.amount}</td>
+                            <td className="py-3.5 px-4 text-slate-300 font-sans">{d.targetTier || 'Direct Balance'}</td>
+                            <td className="py-3.5 px-4 font-sans font-semibold">
+                              <span className={`${d.status === 'Approved' ? 'text-emerald-400' : d.status === 'Rejected' ? 'text-red-400' : 'text-amber-400'}`}>
+                                {d.status}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-slate-400 font-sans">{d.adminNote || '—'}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
           ) : activeTab === 'withdraw' ? (
-            <div className="space-y-6 max-w-5xl mx-auto">
+            <div className="space-y-6 max-w-4xl mx-auto">
               <div>
                 <p className="text-xs text-blue-400 font-medium">Mobile Banking Disbursement • bKash / Nagad / Rocket • Zero Unjustified Holds</p>
                 <h2 className="text-2xl md:text-3xl font-bold text-white tracking-wide mt-1">Wallet Cashout Gateway</h2>
