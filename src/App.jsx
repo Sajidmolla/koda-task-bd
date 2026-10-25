@@ -19,7 +19,8 @@ import {
   deleteDoc,
   serverTimestamp,
   query,
-  where
+  where,
+  onSnapshot
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -42,6 +43,7 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [lang, setLang] = useState('en');
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authMode, setAuthMode] = useState('login');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -70,17 +72,72 @@ export default function App() {
     binance: "KODA-PAY-USDT-ID"
   });
 
+  // Default Tasks with configurable timer (in seconds) and link
   const [tasks, setTasks] = useState([
-    { id: '1', title: 'YouTube Video Watch & Subscribe', reward: 10, link: '#' },
-    { id: '2', title: 'Facebook Page Follow & Like', reward: 8, link: '#' },
-    { id: '3', title: 'Telegram Channel Join', reward: 5, link: '#' },
-    { id: '4', title: 'App Download & Review', reward: 14, link: '#' },
-    { id: '5', title: 'Website Visit & Read Article', reward: 12, link: '#' }
+    { id: '1', title: 'YouTube Video Watch & Subscribe', reward: 10, link: 'https://youtube.com', timerSec: 25 },
+    { id: '2', title: 'Facebook Page Follow & Like', reward: 8, link: 'https://facebook.com', timerSec: 20 },
+    { id: '3', title: 'Telegram Channel Join', reward: 5, link: 'https://telegram.org', timerSec: 15 },
+    { id: '4', title: 'App Download & Review', reward: 14, link: 'https://play.google.com', timerSec: 30 },
+    { id: '5', title: 'Website Visit & Read Article', reward: 12, link: 'https://google.com', timerSec: 25 }
   ]);
 
   // Admin Task management states
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskReward, setNewTaskReward] = useState('');
+  const [newTaskLink, setNewTaskLink] = useState('');
+  const [newTaskTimer, setNewTaskTimer] = useState(25);
+
+  // Membership Plans matching user image style
+  const [packages, setPackages] = useState([
+    { 
+      id: 'p1', 
+      name: 'Basic Starter', 
+      price: 500, 
+      validity: '30 Days', 
+      dailyTasks: 5, 
+      dailyPotential: 100, 
+      desc: 'Perfect for beginners looking to earn daily pocket money with easy micro-tasks.',
+      features: ['5 Daily AI & Ad Tasks', '৳100 Daily Guaranteed Potential', '30 Days Validity', 'Instant bKash/Nagad Payout', 'Standard Support'] 
+    },
+    { 
+      id: 'p2', 
+      name: 'Standard Pro', 
+      price: 1200, 
+      validity: '30 Days', 
+      dailyTasks: 10, 
+      dailyPotential: 450, 
+      desc: 'Most popular membership plan with enhanced daily income and high-tier tasks.',
+      features: ['10 Daily AI & Ad Tasks', '৳450 Daily Potential (৳13,500/mo)', '30 Days Validity', 'Priority Withdrawal Queue', 'Dedicated Telegram Support'] 
+    },
+    { 
+      id: 'p3', 
+      name: 'Premium Booster', 
+      price: 2500, 
+      validity: '45 Days', 
+      dailyTasks: 18, 
+      dailyPotential: 950, 
+      desc: 'Advanced package for serious earners offering high payout AI tasks and extended validity.',
+      features: ['18 Daily Premium Tasks', '৳950 Daily Potential (৳42,750 total)', 'Extended 45 Days Validity', 'VIP Fast Cashouts', 'Exclusive High-Reward AI tasks'] 
+    },
+    { 
+      id: 'p4', 
+      name: 'VIP Master Elite', 
+      price: 5000, 
+      validity: '60 Days', 
+      dailyTasks: 30, 
+      dailyPotential: 1700, 
+      desc: 'Ultimate membership with maximum daily task limits, highest rewards and instant...',
+      features: ['30 Daily High-Reward Tasks', '৳1700 Daily Potential (৳102,000 total)', '60 Days Long Validity', 'Instant Automated Cashouts', 'Personal Account Manager'] 
+    }
+  ]);
+
+  // Admin Membership management states
+  const [newPkgName, setNewPkgName] = useState('');
+  const [newPkgPrice, setNewPkgPrice] = useState('');
+  const [newPkgValidity, setNewPkgValidity] = useState('30 Days');
+  const [newPkgTasks, setNewPkgTasks] = useState('');
+  const [newPkgPotential, setNewPkgPotential] = useState('');
+  const [newPkgDesc, setNewPkgDesc] = useState('');
 
   const [allDeposits, setAllDeposits] = useState([]);
   const [allWithdrawals, setAllWithdrawals] = useState([]);
@@ -94,13 +151,6 @@ export default function App() {
   const [timer, setTimer] = useState(25);
   const [timerActive, setTimerActive] = useState(false);
   const [taskCompletedMsg, setTaskCompletedMsg] = useState('');
-
-  const packages = [
-    { name: 'Bronze Package', price: 500, duration: '1 Month' },
-    { name: 'Silver Package', price: 1200, duration: '1 Month' },
-    { name: 'Gold Package', price: 2500, duration: '1 Month' },
-    { name: 'Platinum Package', price: 3500, duration: '1 Month' }
-  ];
 
   const t = {
     en: {
@@ -140,48 +190,63 @@ export default function App() {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       try {
         if (currentUser) {
           if (currentUser.email === '1roxi1@gmail.com') {
             setUser(currentUser);
             setIsAdmin(true);
-            await fetchAllAdminData();
+            setLoading(false);
           } else {
-            const docRef = doc(db, "users", currentUser.uid);
-            const docSnap = await getDoc(docRef);
-            if (docSnap.exists()) {
-              const data = docSnap.data();
-              if (data.status === 'Banned') {
-                alert("Your account has been banned by admin.");
-                await signOut(auth);
-                setUser(null);
-                setUserData(null);
-                setIsAdmin(false);
-                setLoading(false);
-                return;
-              }
-              setUserData(data);
-              setProfileName(data.name || '');
-              setProfilePhone(data.phone || '');
-            } else {
-              const initialData = {
-                name: currentUser.displayName || "Member",
-                email: currentUser.email,
-                phone: "",
-                depositWallet: 0,
-                earningsWallet: 0,
-                package: null,
-                status: "Active"
-              };
-              await setDoc(docRef, initialData);
-              setUserData(initialData);
-              setProfileName(initialData.name);
-              setProfilePhone(initialData.phone);
-            }
             setUser(currentUser);
             setIsAdmin(false);
-            await fetchUserHistory(currentUser.uid);
+            const unsubUser = onSnapshot(doc(db, "users", currentUser.uid), (docSnap) => {
+              if (docSnap.exists()) {
+                const data = docSnap.data();
+                if (data.status === 'Banned') {
+                  alert("Your account has been banned by admin.");
+                  signOut(auth);
+                  setUser(null);
+                  setUserData(null);
+                  setIsAdmin(false);
+                  return;
+                }
+                setUserData(data);
+                setProfileName(data.name || '');
+                setProfilePhone(data.phone || '');
+              } else {
+                const initialData = {
+                  name: currentUser.displayName || "Member",
+                  email: currentUser.email,
+                  phone: "",
+                  depositWallet: 0,
+                  earningsWallet: 0,
+                  package: null,
+                  status: "Active"
+                };
+                setDoc(doc(db, "users", currentUser.uid), initialData);
+                setUserData(initialData);
+                setProfileName(initialData.name);
+                setProfilePhone(initialData.phone);
+              }
+            });
+
+            const qDep = query(collection(db, "deposits"), where("uid", "==", currentUser.uid));
+            const unsubDep = onSnapshot(qDep, (snapshot) => {
+              setMyDeposits(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+            });
+
+            const qWit = query(collection(db, "withdrawals"), where("uid", "==", currentUser.uid));
+            const unsubWit = onSnapshot(qWit, (snapshot) => {
+              setMyWithdrawals(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+            });
+
+            setLoading(false);
+            return () => {
+              unsubUser();
+              unsubDep();
+              unsubWit();
+            };
           }
         } else {
           setUser(null);
@@ -189,44 +254,31 @@ export default function App() {
           setIsAdmin(false);
           setMyDeposits([]);
           setMyWithdrawals([]);
+          setLoading(false);
         }
       } catch (err) {
         console.error("Firebase Error:", err);
-      } finally {
         setLoading(false);
       }
     });
-    return () => unsubscribe();
+
+    const unsubAllDep = onSnapshot(collection(db, "deposits"), (snapshot) => {
+      setAllDeposits(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    const unsubAllWit = onSnapshot(collection(db, "withdrawals"), (snapshot) => {
+      setAllWithdrawals(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    const unsubAllUsr = onSnapshot(collection(db, "users"), (snapshot) => {
+      setAllUsers(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
+    return () => {
+      unsubscribeAuth();
+      unsubAllDep();
+      unsubAllWit();
+      unsubAllUsr();
+    };
   }, []);
-
-  const fetchAllAdminData = async () => {
-    try {
-      const depSnap = await getDocs(collection(db, "deposits"));
-      setAllDeposits(depSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-
-      const witSnap = await getDocs(collection(db, "withdrawals"));
-      setAllWithdrawals(witSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-
-      const usrSnap = await getDocs(collection(db, "users"));
-      setAllUsers(usrSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const fetchUserHistory = async (uid) => {
-    try {
-      const depQ = query(collection(db, "deposits"), where("uid", "==", uid));
-      const depSnap = await getDocs(depQ);
-      setMyDeposits(depSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-
-      const witQ = query(collection(db, "withdrawals"), where("uid", "==", uid));
-      const witSnap = await getDocs(witQ);
-      setMyWithdrawals(witSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   useEffect(() => {
     let interval = null;
@@ -292,7 +344,6 @@ export default function App() {
       alert("Deposit request submitted successfully! Admin will review soon.");
       setDepositAmount('');
       setDepositTrxId('');
-      fetchUserHistory(user.uid);
     } catch (err) {
       alert("Error: " + err.message);
     }
@@ -322,13 +373,13 @@ export default function App() {
       alert("Withdrawal request submitted successfully!");
       setWithdrawAmount('');
       setWithdrawAccount('');
-      fetchUserHistory(user.uid);
     } catch (err) {
       alert("Error: " + err.message);
     }
   };
 
   const handleBuyPackage = async (pkg) => {
+    if (!user) { setShowAuthModal(true); return; }
     if (!userData) return;
     if (userData.depositWallet < pkg.price) {
       alert(`Insufficient deposit balance (৳${userData.depositWallet}). Please deposit ৳${pkg.price} first!`);
@@ -366,28 +417,37 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col">
-      <header className="bg-slate-900 border-b border-slate-800 px-6 py-4 flex justify-between items-center sticky top-0 z-50">
-        <div>
-          <h1 className="text-xl font-bold text-blue-400 tracking-wide">{t[lang].brand}</h1>
-          <p className="text-xs text-slate-400">{t[lang].subBrand}</p>
+      {/* Header */}
+      <header className="bg-slate-900 border-b border-slate-800 px-4 md:px-6 py-4 flex justify-between items-center sticky top-0 z-50">
+        <div className="flex items-center space-x-3">
+          <button 
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden p-2 text-slate-400 hover:text-white focus:outline-none"
+          >
+            ☰
+          </button>
+          <div>
+            <h1 className="text-lg md:text-xl font-bold text-blue-400 tracking-wide">{t[lang].brand}</h1>
+            <p className="text-[10px] md:text-xs text-slate-400">{t[lang].subBrand}</p>
+          </div>
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 md:space-x-4">
           <button 
             onClick={() => setLang(lang === 'en' ? 'bn' : 'en')}
-            className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-xs rounded font-semibold border border-slate-700"
+            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-xs rounded font-semibold border border-slate-700"
           >
             {lang === 'en' ? 'বাংলা' : 'English'}
           </button>
 
           {user ? (
-            <div className="flex items-center space-x-3">
-              <span className="text-sm text-slate-300 font-medium">
+            <div className="flex items-center space-x-2 md:space-x-3">
+              <span className="text-xs md:text-sm text-slate-300 font-medium truncate max-w-[100px] md:max-w-none">
                 {isAdmin ? '👑 Admin' : userData?.name || user.email}
               </span>
               <button 
                 onClick={handleLogout}
-                className="px-3 py-1 bg-red-600 hover:bg-red-700 text-xs rounded font-medium text-white"
+                className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-xs rounded font-medium text-white"
               >
                 {t[lang].logout}
               </button>
@@ -395,7 +455,7 @@ export default function App() {
           ) : (
             <button 
               onClick={() => setShowAuthModal(true)}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-sm font-semibold rounded-lg text-white shadow-lg"
+              className="px-3 py-1.5 md:px-4 md:py-2 bg-blue-600 hover:bg-blue-700 text-xs md:text-sm font-semibold rounded-lg text-white shadow-lg"
             >
               {t[lang].login} / {t[lang].signup}
             </button>
@@ -403,28 +463,33 @@ export default function App() {
         </div>
       </header>
 
-      <div className="flex flex-1">
-        <aside className="w-64 bg-slate-900 border-r border-slate-800 p-4 hidden md:flex flex-col space-y-2">
+      <div className="flex flex-1 relative">
+        {/* Sidebar for Desktop & Mobile Drawer */}
+        <aside className={`fixed md:static inset-y-0 left-0 z-40 w-64 bg-slate-900 border-r border-slate-800 p-4 transform ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-200 ease-in-out flex flex-col space-y-2`}>
+          <div className="flex justify-between items-center md:hidden mb-4">
+            <span className="font-bold text-blue-400">Menu</span>
+            <button onClick={() => setMobileMenuOpen(false)} className="text-slate-400 hover:text-white">✕</button>
+          </div>
           <button 
-            onClick={() => setActiveTab('dashboard')} 
+            onClick={() => { setActiveTab('dashboard'); setMobileMenuOpen(false); }} 
             className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition ${activeTab === 'dashboard' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
           >
             📊 {t[lang].dashboard}
           </button>
           <button 
-            onClick={() => setActiveTab('tasks')} 
+            onClick={() => { setActiveTab('tasks'); setMobileMenuOpen(false); }} 
             className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition ${activeTab === 'tasks' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
           >
             📋 {t[lang].tasks}
           </button>
           <button 
-            onClick={() => setActiveTab('wallet')} 
+            onClick={() => { setActiveTab('wallet'); setMobileMenuOpen(false); }} 
             className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition ${activeTab === 'wallet' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
           >
             💳 {t[lang].wallet}
           </button>
           <button 
-            onClick={() => setActiveTab('membership')} 
+            onClick={() => { setActiveTab('membership'); setMobileMenuOpen(false); }} 
             className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition ${activeTab === 'membership' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
           >
             ⭐ {t[lang].membership}
@@ -433,6 +498,7 @@ export default function App() {
             onClick={() => {
               if (!user) { setShowAuthModal(true); return; }
               setActiveTab('profile');
+              setMobileMenuOpen(false);
             }} 
             className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition ${activeTab === 'profile' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
           >
@@ -440,7 +506,7 @@ export default function App() {
           </button>
           {isAdmin && (
             <button 
-              onClick={() => setActiveTab('admin')} 
+              onClick={() => { setActiveTab('admin'); setMobileMenuOpen(false); }} 
               className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition ${activeTab === 'admin' ? 'bg-indigo-600 text-white' : 'text-indigo-400 hover:bg-slate-800'}`}
             >
               ⚙️ {t[lang].adminPanel}
@@ -448,14 +514,16 @@ export default function App() {
           )}
         </aside>
 
-        <main className="flex-1 p-6 bg-slate-950 overflow-y-auto">
+        {/* Main Content Area */}
+        <main className="flex-1 p-4 md:p-6 bg-slate-950 overflow-y-auto w-full">
           {isAdmin && activeTab === 'admin' ? (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-indigo-400">Admin Control Panel</h2>
               
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow">
+              {/* Payment Gateways */}
+              <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow">
                 <h3 className="text-lg font-semibold mb-4 text-slate-200">Manage Payment Gateways</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs text-slate-400">bKash Personal</label>
                     <div className="flex mt-1 space-x-2">
@@ -465,7 +533,7 @@ export default function App() {
                         onChange={(e)=>setGateways({...gateways, bkash: e.target.value})} 
                         className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
                       />
-                      <button onClick={()=>copyToClipboard(gateways.bkash)} className="px-3 bg-blue-600 text-xs rounded">Copy</button>
+                      <button onClick={()=>copyToClipboard(gateways.bkash)} className="px-3 bg-blue-600 text-xs rounded text-white">Copy</button>
                     </div>
                   </div>
                   <div>
@@ -477,7 +545,7 @@ export default function App() {
                         onChange={(e)=>setGateways({...gateways, nagad: e.target.value})} 
                         className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
                       />
-                      <button onClick={()=>copyToClipboard(gateways.nagad)} className="px-3 bg-blue-600 text-xs rounded">Copy</button>
+                      <button onClick={()=>copyToClipboard(gateways.nagad)} className="px-3 bg-blue-600 text-xs rounded text-white">Copy</button>
                     </div>
                   </div>
                   <div>
@@ -489,7 +557,7 @@ export default function App() {
                         onChange={(e)=>setGateways({...gateways, rocket: e.target.value})} 
                         className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
                       />
-                      <button onClick={()=>copyToClipboard(gateways.rocket)} className="px-3 bg-blue-600 text-xs rounded">Copy</button>
+                      <button onClick={()=>copyToClipboard(gateways.rocket)} className="px-3 bg-blue-600 text-xs rounded text-white">Copy</button>
                     </div>
                   </div>
                   <div>
@@ -501,62 +569,80 @@ export default function App() {
                         onChange={(e)=>setGateways({...gateways, binance: e.target.value})} 
                         className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
                       />
-                      <button onClick={()=>copyToClipboard(gateways.binance)} className="px-3 bg-blue-600 text-xs rounded">Copy</button>
+                      <button onClick={()=>copyToClipboard(gateways.binance)} className="px-3 bg-blue-600 text-xs rounded text-white">Copy</button>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Task Management */}
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow">
-                <h3 className="text-lg font-semibold mb-4 text-slate-200">Manage Tasks (Add / Delete)</h3>
-                <div className="flex space-x-2 mb-4">
+              {/* Task Management (Link & Timer adjustable) */}
+              <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow">
+                <h3 className="text-lg font-semibold mb-4 text-slate-200">Manage Tasks (Link & Timer Adjustable)</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
                   <input 
                     type="text" 
                     placeholder="Task Title" 
                     value={newTaskTitle} 
                     onChange={(e)=>setNewTaskTitle(e.target.value)} 
-                    className="flex-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                    className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
                   />
                   <input 
                     type="number" 
                     placeholder="Reward (৳)" 
                     value={newTaskReward} 
                     onChange={(e)=>setNewTaskReward(e.target.value)} 
-                    className="w-32 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                    className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
                   />
-                  <button 
-                    onClick={() => {
-                      if (!newTaskTitle || !newTaskReward) return;
-                      const newTask = {
-                        id: Date.now().toString(),
-                        title: newTaskTitle,
-                        reward: Number(newTaskReward),
-                        link: '#'
-                      };
-                      setTasks([...tasks, newTask]);
-                      setNewTaskTitle('');
-                      setNewTaskReward('');
-                      alert("Task added successfully!");
-                    }}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-sm font-semibold rounded text-white"
-                  >
-                    Add Task
-                  </button>
+                  <input 
+                    type="text" 
+                    placeholder="Task Link URL" 
+                    value={newTaskLink} 
+                    onChange={(e)=>setNewTaskLink(e.target.value)} 
+                    className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                  />
+                  <div className="flex space-x-2">
+                    <input 
+                      type="number" 
+                      placeholder="Timer (Sec)" 
+                      value={newTaskTimer} 
+                      onChange={(e)=>setNewTaskTimer(e.target.value)} 
+                      className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                    />
+                    <button 
+                      onClick={() => {
+                        if (!newTaskTitle || !newTaskReward) return;
+                        const newTask = {
+                          id: Date.now().toString(),
+                          title: newTaskTitle,
+                          reward: Number(newTaskReward),
+                          link: newTaskLink || 'https://example.com',
+                          timerSec: Number(newTaskTimer) || 25
+                        };
+                        setTasks([...tasks, newTask]);
+                        setNewTaskTitle('');
+                        setNewTaskReward('');
+                        setNewTaskLink('');
+                        alert("Task added successfully!");
+                      }}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-sm font-semibold rounded text-white whitespace-nowrap"
+                    >
+                      Add Task
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   {tasks.map(task => (
-                    <div key={task.id} className="flex justify-between items-center bg-slate-950 p-3 rounded border border-slate-800">
+                    <div key={task.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-3 rounded border border-slate-800 gap-2">
                       <div>
                         <p className="text-sm font-medium text-slate-200">{task.title}</p>
-                        <p className="text-xs text-blue-400">Reward: ৳{task.reward}</p>
+                        <p className="text-xs text-blue-400">Reward: ৳{task.reward} | Timer: {task.timerSec}s | Link: {task.link}</p>
                       </div>
                       <button 
                         onClick={() => {
                           setTasks(tasks.filter(t => t.id !== task.id));
                           alert("Task removed!");
                         }}
-                        className="px-3 py-1 bg-red-600 hover:bg-red-700 text-xs rounded text-white"
+                        className="px-3 py-1 bg-red-600 hover:bg-red-700 text-xs rounded text-white self-end sm:self-center"
                       >
                         Delete
                       </button>
@@ -565,12 +651,98 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow">
+              {/* Membership Package Customization */}
+              <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow">
+                <h3 className="text-lg font-semibold mb-4 text-slate-200">Manage Membership Packages (Fully Customizable)</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+                  <input 
+                    type="text" 
+                    placeholder="Package Name (e.g. Mega Pro)" 
+                    value={newPkgName} 
+                    onChange={(e)=>setNewPkgName(e.target.value)} 
+                    className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                  />
+                  <input 
+                    type="number" 
+                    placeholder="Price (৳)" 
+                    value={newPkgPrice} 
+                    onChange={(e)=>setNewPkgPrice(e.target.value)} 
+                    className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                  />
+                  <input 
+                    type="text" 
+                    placeholder="Validity (e.g. 30 Days)" 
+                    value={newPkgValidity} 
+                    onChange={(e)=>setNewPkgValidity(e.target.value)} 
+                    className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                  />
+                  <input 
+                    type="number" 
+                    placeholder="Daily Tasks Limit" 
+                    value={newPkgTasks} 
+                    onChange={(e)=>setNewPkgTasks(e.target.value)} 
+                    className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                  />
+                  <input 
+                    type="number" 
+                    placeholder="Daily Potential (৳)" 
+                    value={newPkgPotential} 
+                    onChange={(e)=>setNewPkgPotential(e.target.value)} 
+                    className="bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                  />
+                  <button 
+                    onClick={() => {
+                      if (!newPkgName || !newPkgPrice) return;
+                      const newP = {
+                        id: Date.now().toString(),
+                        name: newPkgName,
+                        price: Number(newPkgPrice),
+                        validity: newPkgValidity || '30 Days',
+                        dailyTasks: Number(newPkgTasks) || 5,
+                        dailyPotential: Number(newPkgPotential) || 100,
+                        desc: 'Customized membership plan via admin panel.',
+                        features: [`${newPkgTasks || 5} Daily Tasks`, `৳${newPkgPotential || 100} Daily Potential`, `${newPkgValidity || '30 Days'} Validity`, 'Instant Payouts']
+                      };
+                      setPackages([...packages, newP]);
+                      setNewPkgName('');
+                      setNewPkgPrice('');
+                      setNewPkgTasks('');
+                      setNewPkgPotential('');
+                      alert("Membership package added!");
+                    }}
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-sm font-semibold rounded text-white"
+                  >
+                    Add Membership Plan
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {packages.map(pkg => (
+                    <div key={pkg.id} className="bg-slate-950 p-4 rounded-lg border border-slate-800 flex justify-between items-start">
+                      <div>
+                        <h4 className="font-bold text-amber-400">{pkg.name} - ৳{pkg.price} / {pkg.validity}</h4>
+                        <p className="text-xs text-slate-300 mt-1">Limit: {pkg.dailyTasks} Tasks | Potential: ৳{pkg.dailyPotential}</p>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          setPackages(packages.filter(p => p.id !== pkg.id));
+                          alert("Package removed!");
+                        }}
+                        className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-xs rounded text-white"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Deposit Audit Requests */}
+              <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow">
                 <h3 className="text-lg font-semibold mb-4 text-slate-200">Deposit Audit Requests</h3>
                 <div className="space-y-3">
                   {allDeposits.length === 0 ? <p className="text-sm text-slate-400">No deposit requests.</p> : 
                     allDeposits.map(dep => (
-                      <div key={dep.id} className="flex justify-between items-center bg-slate-950 p-4 rounded-lg border border-slate-800">
+                      <div key={dep.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-lg border border-slate-800 gap-2">
                         <div>
                           <p className="text-sm font-medium text-slate-200">{dep.email} - ৳{dep.amount} ({dep.method})</p>
                           <p className="text-xs text-slate-400">TrxID: {dep.trxId} | Status: <span className="text-amber-400">{dep.status}</span></p>
@@ -585,7 +757,6 @@ export default function App() {
                                 const currentDep = usrSnap.data().depositWallet || 0;
                                 await updateDoc(usrRef, { depositWallet: currentDep + dep.amount });
                               }
-                              fetchAllAdminData();
                               alert("Deposit approved!");
                             }}
                             className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold rounded text-white"
@@ -599,12 +770,13 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow">
+              {/* Withdrawal Audit Requests */}
+              <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow">
                 <h3 className="text-lg font-semibold mb-4 text-slate-200">Withdrawal Audit Requests</h3>
                 <div className="space-y-3">
                   {allWithdrawals.length === 0 ? <p className="text-sm text-slate-400">No withdrawal requests.</p> : 
                     allWithdrawals.map(wit => (
-                      <div key={wit.id} className="flex justify-between items-center bg-slate-950 p-4 rounded-lg border border-slate-800">
+                      <div key={wit.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-lg border border-slate-800 gap-2">
                         <div>
                           <p className="text-sm font-medium text-slate-200">{wit.email} - ৳{wit.amount} ({wit.method})</p>
                           <p className="text-xs text-slate-400">Account: {wit.account} | Status: <span className="text-amber-400">{wit.status}</span></p>
@@ -614,7 +786,6 @@ export default function App() {
                             <button 
                               onClick={async () => {
                                 await updateDoc(doc(db, "withdrawals", wit.id), { status: "Approved" });
-                                fetchAllAdminData();
                                 alert("Withdrawal approved!");
                               }}
                               className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold rounded text-white"
@@ -630,8 +801,7 @@ export default function App() {
                                   const currentEarn = usrSnap.data().earningsWallet || 0;
                                   await updateDoc(usrRef, { earningsWallet: currentEarn + wit.amount });
                                 }
-                                fetchAllAdminData();
-                                alert("Withdrawal rejected & amount refunded!");
+                                alert("Withdrawal rejected & refunded!");
                               }}
                               className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-xs font-semibold rounded text-white"
                             >
@@ -645,23 +815,83 @@ export default function App() {
                 </div>
               </div>
 
-              {/* User Management with Balance Adjustment & Ban */}
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow">
+              {/* User Management */}
+              <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-xl shadow">
                 <h3 className="text-lg font-semibold mb-4 text-slate-200">User Management & Balance Adjustment</h3>
                 <div className="space-y-4">
                   {allUsers.length === 0 ? <p className="text-sm text-slate-400">No users found.</p> : 
                     allUsers.map(usr => (
-                      <UserAdminRow key={usr.id} usr={usr} db={db} fetchAllAdminData={fetchAllAdminData} />
+                      <UserAdminRow key={usr.id} usr={usr} db={db} />
                     ))
                   }
                 </div>
               </div>
 
             </div>
+          ) : activeTab === 'membership' ? (
+            <div className="space-y-6">
+              <div className="text-center max-w-2xl mx-auto mb-8">
+                <h2 className="text-2xl md:text-3xl font-bold text-amber-400 mb-2">Select Membership Plan</h2>
+                <p className="text-xs md:text-sm text-slate-400">Choose a tier that fits your daily availability. Upgrades take effect immediately and quota resets every 24 hours.</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {packages.map((pkg, idx) => (
+                  <div key={pkg.id || idx} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between space-y-6 hover:border-amber-500/50 transition shadow-xl relative overflow-hidden">
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-100">{pkg.name}</h3>
+                      <p className="text-xs text-slate-400 mt-1 min-h-[32px]">{pkg.desc}</p>
+                      
+                      <div className="my-6">
+                        <span className="text-3xl font-extrabold text-amber-400">৳{pkg.price}</span>
+                        <span className="text-xs text-slate-400"> / {pkg.validity}</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 bg-slate-950 p-3 rounded-xl border border-slate-800/80 mb-6 text-center">
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase tracking-wider">Daily Limit</p>
+                          <p className="text-sm font-bold text-slate-200 mt-0.5">{pkg.dailyTasks} Tasks</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase tracking-wider">Daily Potential</p>
+                          <p className="text-sm font-bold text-emerald-400 mt-0.5">৳{pkg.dailyPotential}</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2.5">
+                        {pkg.features?.map((feat, fIdx) => (
+                          <div key={fIdx} className="flex items-start space-x-2 text-xs text-slate-300">
+                            <span className="text-emerald-400 font-bold">✓</span>
+                            <span>{feat}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button 
+                      onClick={() => handleBuyPackage(pkg)}
+                      className="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-xl font-bold text-white text-sm shadow-lg shadow-amber-900/20 transition"
+                    >
+                      Deposit ৳{pkg.price} to Activate &gt;
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-center text-xs text-slate-400 gap-3">
+                <div className="flex items-center space-x-2">
+                  <span className="text-emerald-400">🛡️</span>
+                  <span>Direct Deposit Verification: Send funds via personal bKash or Nagad to activate packages instantly upon admin transaction validation.</span>
+                </div>
+                <button onClick={() => setActiveTab('wallet')} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-lg whitespace-nowrap">
+                  View Deposit Instructions
+                </button>
+              </div>
+            </div>
           ) : activeTab === 'profile' ? (
-            <div className="space-y-6 max-w-xl">
+            <div className="space-y-6 max-w-xl mx-auto">
               <h2 className="text-2xl font-bold text-blue-400">User Profile Settings</h2>
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4">
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4 shadow-xl">
                 <form onSubmit={async (e) => {
                   e.preventDefault();
                   if (!user) return;
@@ -683,7 +913,7 @@ export default function App() {
                       required
                       value={profileName} 
                       onChange={(e)=>setProfileName(e.target.value)} 
-                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2.5 text-sm text-white"
                     />
                   </div>
                   <div>
@@ -692,7 +922,7 @@ export default function App() {
                       type="email" 
                       disabled 
                       value={user?.email || ''} 
-                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-slate-400 cursor-not-allowed"
+                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2.5 text-sm text-slate-400 cursor-not-allowed"
                     />
                   </div>
                   <div>
@@ -702,7 +932,7 @@ export default function App() {
                       required
                       value={profilePhone} 
                       onChange={(e)=>setProfilePhone(e.target.value)} 
-                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2.5 text-sm text-white"
                     />
                   </div>
                   <div>
@@ -711,10 +941,10 @@ export default function App() {
                       type="text" 
                       disabled 
                       value={userData?.package || 'No Active Package'} 
-                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-amber-400 cursor-not-allowed"
+                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2.5 text-sm text-amber-400 cursor-not-allowed font-bold"
                     />
                   </div>
-                  <button type="submit" className="w-full py-2 bg-blue-600 hover:bg-blue-700 rounded font-bold text-white text-sm">
+                  <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold text-white text-sm shadow-lg">
                     Save Changes
                   </button>
                 </form>
@@ -725,16 +955,16 @@ export default function App() {
               <h2 className="text-2xl font-bold text-blue-400">Wallet & Transactions</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4">
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4 shadow-xl">
                   <h3 className="text-lg font-semibold text-slate-200">Add Deposit</h3>
-                  <div className="p-3 bg-slate-950 rounded border border-slate-800 text-sm flex justify-between items-center">
+                  <div className="p-3.5 bg-slate-950 rounded-xl border border-slate-800 text-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <div>
                       <p className="text-xs text-slate-400 mb-1">Send money to our company personal number:</p>
                       <p className="font-bold text-blue-400">{depositMethod}: {gateways[depositMethod.toLowerCase()] || gateways.bkash}</p>
                     </div>
                     <button 
                       onClick={() => copyToClipboard(gateways[depositMethod.toLowerCase()] || gateways.bkash)}
-                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-xs rounded text-white"
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-xs rounded-lg text-white font-medium whitespace-nowrap"
                     >
                       Copy Number
                     </button>
@@ -745,7 +975,7 @@ export default function App() {
                       <select 
                         value={depositMethod} 
                         onChange={(e)=>setDepositMethod(e.target.value)}
-                        className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                        className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
                       >
                         <option value="bKash">bKash</option>
                         <option value="Nagad">Nagad</option>
@@ -760,7 +990,7 @@ export default function App() {
                         required 
                         value={depositAmount} 
                         onChange={(e)=>setDepositAmount(e.target.value)} 
-                        className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                        className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
                       />
                     </div>
                     <div>
@@ -770,16 +1000,16 @@ export default function App() {
                         required 
                         value={depositTrxId} 
                         onChange={(e)=>setDepositTrxId(e.target.value)} 
-                        className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                        className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
                       />
                     </div>
-                    <button type="submit" className="w-full py-2 bg-blue-600 hover:bg-blue-700 rounded font-bold text-white text-sm">
+                    <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold text-white text-sm shadow-lg">
                       Submit Deposit
                     </button>
                   </form>
                 </div>
 
-                <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4">
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4 shadow-xl">
                   <h3 className="text-lg font-semibold text-slate-200">Request Withdrawal</h3>
                   <form onSubmit={handleWithdrawSubmit} className="space-y-3">
                     <div>
@@ -787,7 +1017,7 @@ export default function App() {
                       <select 
                         value={withdrawMethod} 
                         onChange={(e)=>setWithdrawMethod(e.target.value)}
-                        className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                        className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
                       >
                         <option value="bKash">bKash</option>
                         <option value="Nagad">Nagad</option>
@@ -801,7 +1031,7 @@ export default function App() {
                         required 
                         value={withdrawAmount} 
                         onChange={(e)=>setWithdrawAmount(e.target.value)} 
-                        className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                        className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
                       />
                     </div>
                     <div>
@@ -811,29 +1041,29 @@ export default function App() {
                         required 
                         value={withdrawAccount} 
                         onChange={(e)=>setWithdrawAccount(e.target.value)} 
-                        className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                        className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
                       />
                     </div>
-                    <button type="submit" className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 rounded font-bold text-white text-sm">
+                    <button type="submit" className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-bold text-white text-sm shadow-lg">
                       Request Withdraw
                     </button>
                   </form>
                 </div>
               </div>
 
-              {/* User History Section inside Wallet */}
+              {/* User History */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4">
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4 shadow-xl">
                   <h3 className="text-lg font-semibold text-slate-200">My Deposit History</h3>
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                     {myDeposits.length === 0 ? <p className="text-xs text-slate-400">No deposit history.</p> :
                       myDeposits.map(d => (
-                        <div key={d.id} className="bg-slate-950 p-3 rounded border border-slate-800 flex justify-between items-center text-xs">
+                        <div key={d.id} className="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center text-xs">
                           <div>
                             <p className="font-bold text-blue-400">৳{d.amount} ({d.method})</p>
-                            <p className="text-slate-400">TrxID: {d.trxId}</p>
+                            <p className="text-slate-400 text-[10px]">TrxID: {d.trxId}</p>
                           </div>
-                          <span className={`font-semibold ${d.status === 'Approved' ? 'text-emerald-400' : d.status === 'Rejected' ? 'text-red-400' : 'text-amber-400'}`}>
+                          <span className={`font-semibold px-2 py-0.5 rounded text-[10px] ${d.status === 'Approved' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : d.status === 'Rejected' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}`}>
                             {d.status}
                           </span>
                         </div>
@@ -842,17 +1072,17 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4">
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4 shadow-xl">
                   <h3 className="text-lg font-semibold text-slate-200">My Withdrawal History</h3>
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                     {myWithdrawals.length === 0 ? <p className="text-xs text-slate-400">No withdrawal history.</p> :
                       myWithdrawals.map(w => (
-                        <div key={w.id} className="bg-slate-950 p-3 rounded border border-slate-800 flex justify-between items-center text-xs">
+                        <div key={w.id} className="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center text-xs">
                           <div>
                             <p className="font-bold text-emerald-400">৳{w.amount} ({w.method})</p>
-                            <p className="text-slate-400">Acc: {w.account}</p>
+                            <p className="text-slate-400 text-[10px]">Acc: {w.account}</p>
                           </div>
-                          <span className={`font-semibold ${w.status === 'Approved' ? 'text-emerald-400' : w.status === 'Rejected' ? 'text-red-400' : 'text-amber-400'}`}>
+                          <span className={`font-semibold px-2 py-0.5 rounded text-[10px] ${w.status === 'Approved' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : w.status === 'Rejected' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}`}>
                             {w.status}
                           </span>
                         </div>
@@ -863,57 +1093,37 @@ export default function App() {
               </div>
 
             </div>
-          ) : activeTab === 'membership' ? (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-amber-400">Membership Packages</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {packages.map((pkg, idx) => (
-                  <div key={idx} className="bg-slate-900 border border-slate-800 p-5 rounded-xl flex flex-col justify-between space-y-4">
-                    <div>
-                      <h3 className="text-lg font-bold text-slate-100">{pkg.name}</h3>
-                      <p className="text-2xl font-bold text-blue-400 mt-2">৳{pkg.price}</p>
-                      <p className="text-xs text-slate-400 mt-1">Duration: {pkg.duration}</p>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        if (!user) { setShowAuthModal(true); return; }
-                        handleBuyPackage(pkg);
-                      }}
-                      className="w-full py-2 bg-amber-600 hover:bg-amber-700 rounded font-bold text-white text-sm"
-                    >
-                      Activate Package
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
           ) : (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-slate-900 border border-slate-800 p-5 rounded-xl">
-                  <p className="text-sm text-slate-400">{t[lang].depositWallet}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl">
+                  <p className="text-xs text-slate-400">{t[lang].depositWallet}</p>
                   <h3 className="text-2xl font-bold text-blue-400 mt-2">৳ {userData ? userData.depositWallet : 0}</h3>
                 </div>
-                <div className="bg-slate-900 border border-slate-800 p-5 rounded-xl">
-                  <p className="text-sm text-slate-400">{t[lang].earningsWallet}</p>
+                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl">
+                  <p className="text-xs text-slate-400">{t[lang].earningsWallet}</p>
                   <h3 className="text-2xl font-bold text-emerald-400 mt-2">৳ {userData ? userData.earningsWallet : 0}</h3>
                 </div>
-                <div className="bg-slate-900 border border-slate-800 p-5 rounded-xl">
-                  <p className="text-sm text-slate-400">{t[lang].activePackage}</p>
-                  <h3 className="text-lg font-bold text-amber-400 mt-2">
+                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl">
+                  <p className="text-xs text-slate-400">{t[lang].activePackage}</p>
+                  <h3 className="text-base md:text-lg font-bold text-amber-400 mt-2 truncate">
                     {userData?.package ? userData.package : t[lang].noPackage}
                   </h3>
                 </div>
               </div>
 
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl">
-                <h3 className="text-lg font-semibold mb-4 text-slate-200">Available Tasks</h3>
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
+                <h3 className="text-lg font-semibold mb-4 text-slate-200">Available Tasks (Timer & Link Enabled)</h3>
                 <div className="space-y-3">
                   {tasks.map(task => (
-                    <div key={task.id} className="flex justify-between items-center bg-slate-950 p-4 rounded-lg border border-slate-800">
+                    <div key={task.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-xl border border-slate-800 gap-3">
                       <div>
-                        <h4 className="font-medium text-slate-200">{task.title}</h4>
-                        <span className="text-xs text-blue-400 font-semibold">Reward: ৳{task.reward}</span>
+                        <h4 className="font-medium text-slate-200 text-sm md:text-base">{task.title}</h4>
+                        <div className="flex flex-wrap items-center gap-3 mt-1">
+                          <span className="text-xs text-blue-400 font-semibold">Reward: ৳{task.reward}</span>
+                          <span className="text-xs text-amber-400 bg-amber-950/50 px-2 py-0.5 rounded border border-amber-800/50">⏱️ Timer: {task.timerSec} Seconds</span>
+                          <a href={task.link} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 underline hover:text-indigo-300">Visit Link ↗</a>
+                        </div>
                       </div>
                       <button 
                         onClick={() => {
@@ -924,11 +1134,11 @@ export default function App() {
                             return;
                           }
                           setSelectedTask(task);
-                          setTimer(25);
+                          setTimer(task.timerSec || 25);
                           setTimerActive(true);
                           setTaskCompletedMsg('');
                         }}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-xs font-semibold rounded text-white"
+                        className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-xs font-semibold rounded-xl text-white shadow-lg whitespace-nowrap"
                       >
                         Start Task
                       </button>
@@ -941,11 +1151,13 @@ export default function App() {
         </main>
       </div>
 
+      {/* Task Timer Modal */}
       {selectedTask && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl max-w-md w-full text-center space-y-4">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-md w-full text-center space-y-4 shadow-2xl">
             <h3 className="text-xl font-bold text-slate-100">{selectedTask.title}</h3>
-            <div className="text-4xl font-mono text-blue-400 font-bold py-4">
+            <p className="text-xs text-slate-400">Please complete your task. Link: <a href={selectedTask.link} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">{selectedTask.link}</a></p>
+            <div className="text-4xl font-mono text-blue-400 font-bold py-4 bg-slate-950 rounded-xl border border-slate-800">
               00:{timer < 10 ? `0${timer}` : timer}
             </div>
             {taskCompletedMsg ? (
@@ -962,16 +1174,16 @@ export default function App() {
                   setSelectedTask(null);
                   alert(`Successfully collected ৳${selectedTask.reward}!`);
                 }}
-                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 rounded-lg font-bold text-white shadow-lg"
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-bold text-white shadow-lg"
               >
                 Collect Reward (৳{selectedTask.reward})
               </button>
             ) : (
-              <p className="text-sm text-slate-400">Please wait while the task timer completes...</p>
+              <p className="text-sm text-slate-400 animate-pulse">Please wait while the task timer completes...</p>
             )}
             <button 
               onClick={() => setSelectedTask(null)}
-              className="text-xs text-slate-500 hover:text-slate-300 underline"
+              className="text-xs text-slate-500 hover:text-slate-300 underline pt-2"
             >
               Cancel
             </button>
@@ -979,9 +1191,10 @@ export default function App() {
         </div>
       )}
 
+      {/* Auth Modal */}
       {showAuthModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl max-w-md w-full space-y-4">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-md w-full space-y-4 shadow-2xl">
             <h3 className="text-xl font-bold text-slate-100">
               {authMode === 'login' ? 'Sign In to KODA Task' : 'Create New Account'}
             </h3>
@@ -997,7 +1210,7 @@ export default function App() {
                       required 
                       value={fullName} 
                       onChange={(e)=>setFullName(e.target.value)} 
-                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
                     />
                   </div>
                   <div>
@@ -1007,7 +1220,7 @@ export default function App() {
                       required 
                       value={phone} 
                       onChange={(e)=>setPhone(e.target.value)} 
-                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
                     />
                   </div>
                 </>
@@ -1019,7 +1232,7 @@ export default function App() {
                   required 
                   value={email} 
                   onChange={(e)=>setEmail(e.target.value)} 
-                  className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                  className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
                 />
               </div>
               <div>
@@ -1029,13 +1242,13 @@ export default function App() {
                   required 
                   value={password} 
                   onChange={(e)=>setPassword(e.target.value)} 
-                  className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white"
+                  className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
                 />
               </div>
 
               <button 
                 type="submit" 
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-white shadow-lg"
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold text-white shadow-lg"
               >
                 {authMode === 'login' ? 'Sign In' : 'Register Account'}
               </button>
@@ -1062,7 +1275,7 @@ export default function App() {
   );
 }
 
-function UserAdminRow({ usr, db, fetchAllAdminData }) {
+function UserAdminRow({ usr, db }) {
   const [depWallet, setDepWallet] = useState(usr.depositWallet || 0);
   const [earnWallet, setEarnWallet] = useState(usr.earningsWallet || 0);
 
@@ -1073,7 +1286,6 @@ function UserAdminRow({ usr, db, fetchAllAdminData }) {
         earningsWallet: Number(earnWallet)
       });
       alert(`Wallet updated for ${usr.email}`);
-      fetchAllAdminData();
     } catch (err) {
       alert("Error: " + err.message);
     }
@@ -1083,7 +1295,6 @@ function UserAdminRow({ usr, db, fetchAllAdminData }) {
     const newStatus = usr.status === 'Banned' ? 'Active' : 'Banned';
     try {
       await updateDoc(doc(db, "users", usr.id), { status: newStatus });
-      fetchAllAdminData();
       alert(`User status changed to ${newStatus}`);
     } catch (err) {
       alert("Error: " + err.message);
@@ -1091,8 +1302,8 @@ function UserAdminRow({ usr, db, fetchAllAdminData }) {
   };
 
   return (
-    <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-3">
-      <div className="flex justify-between items-center">
+    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
         <div>
           <p className="text-sm font-medium text-slate-200">{usr.name} ({usr.email})</p>
           <p className="text-xs text-slate-400">Phone: {usr.phone || 'N/A'} | Status: <span className={usr.status === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
@@ -1100,36 +1311,36 @@ function UserAdminRow({ usr, db, fetchAllAdminData }) {
         {usr.email !== '1roxi1@gmail.com' && (
           <button 
             onClick={handleToggleBan}
-            className={`px-3 py-1.5 text-xs font-semibold rounded text-white ${usr.status === 'Banned' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg text-white ${usr.status === 'Banned' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}
           >
             {usr.status === 'Banned' ? 'Unban' : 'Ban'}
           </button>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 items-center pt-2 border-t border-slate-800">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center pt-2 border-t border-slate-800">
         <div>
-          <label className="text-xs text-slate-400">Deposit Wallet (৳)</label>
+          <label className="text-[10px] text-slate-400">Deposit Wallet (৳)</label>
           <input 
             type="number" 
             value={depWallet} 
             onChange={(e)=>setDepWallet(e.target.value)} 
-            className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-1.5 text-xs text-white"
+            className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white"
           />
         </div>
         <div>
-          <label className="text-xs text-slate-400">Earnings Wallet (৳)</label>
+          <label className="text-[10px] text-slate-400">Earnings Wallet (৳)</label>
           <input 
             type="number" 
             value={earnWallet} 
             onChange={(e)=>setEarnWallet(e.target.value)} 
-            className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-1.5 text-xs text-white"
+            className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white"
           />
         </div>
-        <div className="flex items-end h-full pt-5">
+        <div className="flex items-end h-full pt-1 sm:pt-4">
           <button 
             onClick={handleUpdateBalance}
-            className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-xs font-semibold rounded text-white"
+            className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-xs font-semibold rounded-lg text-white shadow"
           >
             Update Balance
           </button>
