@@ -54,9 +54,8 @@ export default function App() {
   const [phone, setPhone] = useState('');
   const [authError, setAuthError] = useState('');
 
-  // Profile editable states
+  // Profile editable states (only Name is editable now)
   const [profileName, setProfileName] = useState('');
-  const [profilePhone, setProfilePhone] = useState('');
 
   // Deposit gateway states matching screenshot design
   const [depositMethod, setDepositMethod] = useState('bKash');
@@ -243,12 +242,11 @@ export default function App() {
                 }
                 setUserData(data);
                 setProfileName(data.name || '');
-                setProfilePhone(data.phone || '');
               } else {
                 const initialData = {
                   name: currentUser.displayName || "Member",
                   email: currentUser.email,
-                  phone: "",
+                  phone: phone || "",
                   depositWallet: 0,
                   earningsWallet: 0,
                   package: null,
@@ -257,7 +255,6 @@ export default function App() {
                 setDoc(doc(db, "users", currentUser.uid), initialData);
                 setUserData(initialData);
                 setProfileName(initialData.name);
-                setProfilePhone(initialData.phone);
               }
             });
 
@@ -1546,17 +1543,16 @@ export default function App() {
                   if (!user) return;
                   try {
                     await updateDoc(doc(db, "users", user.uid), {
-                      name: profileName,
-                      phone: profilePhone
+                      name: profileName
                     });
-                    setUserData({ ...userData, name: profileName, phone: profilePhone });
-                    alert("Profile updated successfully!");
+                    setUserData({ ...userData, name: profileName });
+                    alert("Profile name updated successfully!");
                   } catch (err) {
                     alert("Error: " + err.message);
                   }
                 }} className="space-y-4">
                   <div>
-                    <label className="text-xs text-slate-400">Full Name</label>
+                    <label className="text-xs text-slate-400">Full Name (Editable)</label>
                     <input 
                       type="text" 
                       required
@@ -1566,22 +1562,21 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-slate-400">Email Address (Cannot be changed)</label>
+                    <label className="text-xs text-slate-400">Email Address (Locked & Unchangeable)</label>
                     <input 
                       type="email" 
                       disabled 
                       value={user?.email || ''} 
-                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2.5 text-sm text-slate-400 cursor-not-allowed"
+                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2.5 text-sm text-slate-500 cursor-not-allowed"
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-slate-400">Mobile Number</label>
+                    <label className="text-xs text-slate-400">Mobile Number (Locked & Unchangeable)</label>
                     <input 
                       type="text" 
-                      required
-                      value={profilePhone} 
-                      onChange={(e)=>setProfilePhone(e.target.value)} 
-                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2.5 text-sm text-white"
+                      disabled 
+                      value={userData?.phone || 'N/A'} 
+                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2.5 text-sm text-slate-500 cursor-not-allowed"
                     />
                   </div>
                   <div>
@@ -1594,7 +1589,7 @@ export default function App() {
                     />
                   </div>
                   <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold text-white text-sm shadow-lg">
-                    Save Changes
+                    Save Profile Name
                   </button>
                 </form>
               </div>
