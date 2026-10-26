@@ -234,44 +234,52 @@ export default function App() {
           } else {
             setUser(currentUser);
             setIsAdmin(false);
-            const unsubUser = onSnapshot(doc(db, "users", currentUser.uid), async (docSnap) => {
+            
+            const userDocRef = doc(db, "users", currentUser.uid);
+            const userDocSnap = await getDoc(userDocRef);
+
+            if (userDocSnap.exists()) {
+              const data = userDocSnap.data();
+              if (data.status === 'Banned') {
+                alert("Your account has been banned by admin.");
+                signOut(auth);
+                setUser(null);
+                setUserData(null);
+                setIsAdmin(false);
+                return;
+              }
+              // Force auto-generate name-based referral code for ANY user if missing or generic
+              if (!data.referralCode || data.referralCode.startsWith("KODA")) {
+                const cleanName = (data.name || currentUser.displayName || "User").replace(/\s+/g, '');
+                const generatedCode = cleanName + "-" + Math.floor(1000 + Math.random() * 9000);
+                await updateDoc(userDocRef, { referralCode: generatedCode });
+                data.referralCode = generatedCode;
+              }
+              setUserData(data);
+              setProfileName(data.name || '');
+            } else {
+              const cleanName = (currentUser.displayName || "User").replace(/\s+/g, '');
+              const uniqueRefCode = cleanName + "-" + Math.floor(1000 + Math.random() * 9000);
+              const initialData = {
+                name: currentUser.displayName || "User",
+                email: currentUser.email,
+                phone: "",
+                referralCode: uniqueRefCode,
+                referredBy: "",
+                depositWallet: 0,
+                earningsWallet: 0,
+                referralEarnings: 0,
+                package: null,
+                status: "Active"
+              };
+              await setDoc(userDocRef, initialData);
+              setUserData(initialData);
+              setProfileName(initialData.name);
+            }
+
+            const unsubUser = onSnapshot(userDocRef, (docSnap) => {
               if (docSnap.exists()) {
-                const data = docSnap.data();
-                if (data.status === 'Banned') {
-                  alert("Your account has been banned by admin.");
-                  signOut(auth);
-                  setUser(null);
-                  setUserData(null);
-                  setIsAdmin(false);
-                  return;
-                }
-                // Ensure existing users without referralCode get one automatically
-                if (!data.referralCode) {
-                  const cleanName = (data.name || "Member").replace(/\s+/g, '');
-                  const generatedCode = cleanName + "-" + Math.floor(1000 + Math.random() * 9000);
-                  await updateDoc(doc(db, "users", currentUser.uid), { referralCode: generatedCode });
-                  data.referralCode = generatedCode;
-                }
-                setUserData(data);
-                setProfileName(data.name || '');
-              } else {
-                const cleanName = (currentUser.displayName || "Member").replace(/\s+/g, '');
-                const uniqueRefCode = cleanName + "-" + Math.floor(1000 + Math.random() * 9000);
-                const initialData = {
-                  name: currentUser.displayName || "Member",
-                  email: currentUser.email,
-                  phone: "",
-                  referralCode: uniqueRefCode,
-                  referredBy: "",
-                  depositWallet: 0,
-                  earningsWallet: 0,
-                  referralEarnings: 0,
-                  package: null,
-                  status: "Active"
-                };
-                await setDoc(doc(db, "users", currentUser.uid), initialData);
-                setUserData(initialData);
-                setProfileName(initialData.name);
+                setUserData(docSnap.data());
               }
             });
 
@@ -312,8 +320,20 @@ export default function App() {
     const unsubAllWit = onSnapshot(collection(db, "withdrawals"), (snapshot) => {
       setAllWithdrawals(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-    const unsubAllUsr = onSnapshot(collection(db, "users"), (snapshot) => {
-      setAllUsers(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    const unsubAllUsr = onSnapshot(collection(db, "users"), async (snapshot) => {
+      const usersList = [];
+      for (const userDoc of snapshot.docs) {
+        const uData = userDoc.data();
+        // Automatically ensure every existing user in Firestore gets a name-based referral code immediately
+        if (!uData.referralCode || uData.referralCode.startsWith("KODA")) {
+          const cleanName = (uData.name || "User").replace(/\s+/g, '');
+          const newCode = cleanName + "-" + Math.floor(1000 + Math.random() * 9000);
+          await updateDoc(doc(db, "users", userDoc.id), { referralCode: newCode });
+          uData.referralCode = newCode;
+        }
+        usersList.push({ id: userDoc.id, ...uData });
+      }
+      setAllUsers(usersList);
     });
 
     return () => {
@@ -1786,7 +1806,7 @@ export default function App() {
               </h2>
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4 text-center">
                 <div className="text-4xl">💬</div>
-                <h3 className="text-lg font-bold text-slate-100">Need Help with Deposit or Task?</h3>
+                <h3 className="text-lg font-bold text-slate100">Need Help with Deposit or Task?</h3>
                 <p className="text-xs text-slate-400">Our support team is available 24/7 to help you out with any payment or account issues.</p>
                 <div className="pt-4 space-y-3">
                   <a 
@@ -1819,7 +1839,7 @@ export default function App() {
             </span>
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="items-center space-x-4 flex">
             <a 
               href="https://t.me/Yours_support_admin" 
               target="_blank" 
@@ -1857,7 +1877,7 @@ export default function App() {
                   setSelectedTask(null);
                   alert(`Successfully collected ৳${selectedTask.reward}!`);
                 }}
-                className="wp-full py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-bold text-white shadow-lg"
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-bold text-white shadow-lg"
               >
                 Collect Reward (৳{selectedTask.reward})
               </button>
@@ -2007,7 +2027,7 @@ function UserAdminRow({ usr, db }) {
             onClick={handleToggleBan}
             className={`px-3 py-1.5 text-xs font-semibold rounded-lg text-white ${usr.status === 'Banned' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}
           >
-            {usr.status === 'Banned' ? 'Unban User' : 'Ban User'}
+            {usr.status === 'Banned' ? 'Unban User' : 'Ban Data'}
           </button>
         )}
       </div>
