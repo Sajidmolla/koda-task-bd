@@ -55,7 +55,7 @@ export default function App() {
   const [signupReferralCode, setSignupReferralCode] = useState('');
   const [authError, setAuthError] = useState('');
 
-  // Profile editable states (only Name is editable now, logout moved inside profile)
+  // Profile editable states (only Name is editable now)
   const [profileName, setProfileName] = useState('');
 
   // Deposit gateway states matching screenshot design
@@ -248,11 +248,14 @@ export default function App() {
                 setUserData(data);
                 setProfileName(data.name || '');
               } else {
+                // Fallback creation if missing
+                const cleanName = (currentUser.displayName || "Member").replace(/\s+/g, '');
+                const uniqueRefCode = cleanName + "-" + Math.floor(1000 + Math.random() * 9000);
                 const initialData = {
                   name: currentUser.displayName || "Member",
                   email: currentUser.email,
-                  phone: phone || "",
-                  referralCode: "KODA" + Math.floor(1000 + Math.random() * 9000),
+                  phone: "",
+                  referralCode: uniqueRefCode,
                   referredBy: "",
                   depositWallet: 0,
                   earningsWallet: 0,
@@ -344,13 +347,16 @@ export default function App() {
     try {
       const res = await createUserWithEmailAndPassword(auth, email, password);
       
-      const uniqueRefCode = "KODA" + Math.floor(1000 + Math.random() * 9000);
+      // Generate name-based unique referral code jemon: "Sajid-4821"
+      const cleanName = fullName.trim().replace(/\s+/g, '');
+      const uniqueRefCode = (cleanName || "User") + "-" + Math.floor(1000 + Math.random() * 9000);
+      
       const newUserDoc = {
         name: fullName,
         email: email,
         phone: phone,
         referralCode: uniqueRefCode,
-        referredBy: signupReferralCode.trim() || "",
+        referredBy: signupReferralCode.trim() || "", // Optional referral code
         depositWallet: 0,
         earningsWallet: 0,
         referralEarnings: 0,
@@ -407,7 +413,7 @@ export default function App() {
   const handleWithdrawSubmit = async (e) => {
     e.preventDefault();
     
-    // Check referral rule: Must have active membership to withdraw referral/earnings
+    // Check referral rule: Must have active membership to withdraw funds
     if (!userData?.package) {
       alert("⚠️ You must activate a membership package to withdraw funds!");
       setActiveTab('membership');
@@ -453,8 +459,8 @@ export default function App() {
     if (!userData) return;
 
     let finalPrice = pkg.price;
-    // Check if user registered with special referral code or active referrer with membership
-    if (userData.referredBy === gateways.specialReferral) {
+    // Check special admin referral code discount
+    if (userData.referredBy && userData.referredBy.toLowerCase() === (gateways.specialReferral || "KODA777").toLowerCase()) {
       finalPrice = pkg.price * 0.9; // 10% discount
     }
 
@@ -471,14 +477,13 @@ export default function App() {
         package: pkg.name
       });
 
-      // Handle referral bonus distribution if referred by another user
-      if (userData.referredBy && userData.referredBy !== gateways.specialReferral) {
-        const refUserObj = allUsers.find(u => u.referralCode === userData.referredBy);
-        if (refUserObj && refUserObj.package) { // Both referrer and user must have membership
+      // Handle referral commission if referred by another user (and both have package)
+      if (userData.referredBy && userData.referredBy.toLowerCase() !== (gateways.specialReferral || "KODA777").toLowerCase()) {
+        const refUserObj = allUsers.find(u => u.referralCode?.toLowerCase() === userData.referredBy.toLowerCase());
+        if (refUserObj && refUserObj.package) {
           const currentRefEarnings = refUserObj.earningsWallet || 0;
-          // Calculate reward based on invite milestone logic or direct commission
           await updateDoc(doc(db, "users", refUserObj.id), {
-            earningsWallet: currentRefEarnings + 50 // Referral bonus per active membership
+            earningsWallet: currentRefEarnings + 50 // Commission bonus
           });
         }
       }
@@ -519,7 +524,8 @@ export default function App() {
   const filteredUsers = allUsers.filter(u => 
     u.name?.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
     u.email?.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-    u.phone?.includes(userSearchQuery)
+    u.phone?.includes(userSearchQuery) ||
+    u.referralCode?.toLowerCase().includes(userSearchQuery.toLowerCase())
   );
 
   const pendingDepositsCount = allDeposits.filter(d => d.status === 'Pending Verification' || d.status === 'Pending').length;
@@ -527,7 +533,7 @@ export default function App() {
   const totalPendingFinance = pendingDepositsCount + pendingWithdrawalsCount;
 
   // Calculate my total referrals count
-  const myReferralCount = allUsers.filter(u => u.referredBy === userData?.referralCode).length;
+  const myReferralCount = allUsers.filter(u => u.referredBy?.toLowerCase() === userData?.referralCode?.toLowerCase()).length;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col justify-between w-full overflow-x-hidden">
@@ -1176,7 +1182,7 @@ export default function App() {
               <div className="text-center max-w-2xl mx-auto mb-8">
                 <h2 className="text-2xl md:text-3xl font-bold text-amber-400 mb-2">Select Membership Plan</h2>
                 <p className="text-xs md:text-sm text-slate-400">Choose a tier that fits your daily availability. Upgrades take effect immediately and quota resets every 24 hours.</p>
-                {userData?.referredBy === gateways.specialReferral && (
+                {userData?.referredBy && userData?.referredBy.toLowerCase() === (gateways.specialReferral || "KODA777").toLowerCase() && (
                   <div className="mt-3 inline-block bg-emerald-950 text-emerald-400 px-4 py-1.5 rounded-full text-xs font-bold border border-emerald-800">
                     🎉 Special Referral Applied: 10% Discount on All Memberships!
                   </div>
@@ -1185,8 +1191,8 @@ export default function App() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {packages.map((pkg, idx) => {
-                  const hasDiscount = userData?.referredBy === gateways.specialReferral;
-                  const effectivePrice = hasDiscount ? pkg.price * 0.9 : pkg.price;
+                  const hasDiscount = userData?.referredBy && userData?.referredBy.toLowerCase() === (gateways.specialReferral || "KODA777").toLowerCase();
+                  const effectivePrice = hasDiscount ? Math.round(pkg.price * 0.9) : pkg.price;
                   return (
                     <div key={pkg.id || idx} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between space-y-6 hover:border-amber-500/50 transition shadow-xl relative overflow-hidden">
                       <div>
@@ -1899,10 +1905,10 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-slate-400">Referral Code (Optional)</label>
+                    <label className="text-xs text-slate-400">Referral Code (Optional - Leave blank if none)</label>
                     <input 
                       type="text" 
-                      placeholder="e.g. KODA777 or user code"
+                      placeholder="e.g. KODA777 or Sajid-4821"
                       value={signupReferralCode} 
                       onChange={(e)=>setSignupReferralCode(e.target.value)} 
                       className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-cyan-400 font-mono"
