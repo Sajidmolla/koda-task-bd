@@ -234,7 +234,7 @@ export default function App() {
           } else {
             setUser(currentUser);
             setIsAdmin(false);
-            const unsubUser = onSnapshot(doc(db, "users", currentUser.uid), (docSnap) => {
+            const unsubUser = onSnapshot(doc(db, "users", currentUser.uid), async (docSnap) => {
               if (docSnap.exists()) {
                 const data = docSnap.data();
                 if (data.status === 'Banned') {
@@ -245,10 +245,16 @@ export default function App() {
                   setIsAdmin(false);
                   return;
                 }
+                // Ensure existing users without referralCode get one automatically
+                if (!data.referralCode) {
+                  const cleanName = (data.name || "Member").replace(/\s+/g, '');
+                  const generatedCode = cleanName + "-" + Math.floor(1000 + Math.random() * 9000);
+                  await updateDoc(doc(db, "users", currentUser.uid), { referralCode: generatedCode });
+                  data.referralCode = generatedCode;
+                }
                 setUserData(data);
                 setProfileName(data.name || '');
               } else {
-                // Fallback creation if missing
                 const cleanName = (currentUser.displayName || "Member").replace(/\s+/g, '');
                 const uniqueRefCode = cleanName + "-" + Math.floor(1000 + Math.random() * 9000);
                 const initialData = {
@@ -263,7 +269,7 @@ export default function App() {
                   package: null,
                   status: "Active"
                 };
-                setDoc(doc(db, "users", currentUser.uid), initialData);
+                await setDoc(doc(db, "users", currentUser.uid), initialData);
                 setUserData(initialData);
                 setProfileName(initialData.name);
               }
@@ -347,7 +353,6 @@ export default function App() {
     try {
       const res = await createUserWithEmailAndPassword(auth, email, password);
       
-      // Generate name-based unique referral code jemon: "Sajid-4821"
       const cleanName = fullName.trim().replace(/\s+/g, '');
       const uniqueRefCode = (cleanName || "User") + "-" + Math.floor(1000 + Math.random() * 9000);
       
@@ -356,7 +361,7 @@ export default function App() {
         email: email,
         phone: phone,
         referralCode: uniqueRefCode,
-        referredBy: signupReferralCode.trim() || "", // Optional referral code
+        referredBy: signupReferralCode.trim() || "",
         depositWallet: 0,
         earningsWallet: 0,
         referralEarnings: 0,
@@ -413,7 +418,6 @@ export default function App() {
   const handleWithdrawSubmit = async (e) => {
     e.preventDefault();
     
-    // Check referral rule: Must have active membership to withdraw funds
     if (!userData?.package) {
       alert("⚠️ You must activate a membership package to withdraw funds!");
       setActiveTab('membership');
@@ -459,9 +463,8 @@ export default function App() {
     if (!userData) return;
 
     let finalPrice = pkg.price;
-    // Check special admin referral code discount
     if (userData.referredBy && userData.referredBy.toLowerCase() === (gateways.specialReferral || "KODA777").toLowerCase()) {
-      finalPrice = pkg.price * 0.9; // 10% discount
+      finalPrice = Math.round(pkg.price * 0.9);
     }
 
     if (userData.depositWallet < finalPrice) {
@@ -477,13 +480,12 @@ export default function App() {
         package: pkg.name
       });
 
-      // Handle referral commission if referred by another user (and both have package)
       if (userData.referredBy && userData.referredBy.toLowerCase() !== (gateways.specialReferral || "KODA777").toLowerCase()) {
         const refUserObj = allUsers.find(u => u.referralCode?.toLowerCase() === userData.referredBy.toLowerCase());
         if (refUserObj && refUserObj.package) {
           const currentRefEarnings = refUserObj.earningsWallet || 0;
           await updateDoc(doc(db, "users", refUserObj.id), {
-            earningsWallet: currentRefEarnings + 50 // Commission bonus
+            earningsWallet: currentRefEarnings + 50
           });
         }
       }
@@ -532,8 +534,8 @@ export default function App() {
   const pendingWithdrawalsCount = allWithdrawals.filter(w => w.status === 'Pending').length;
   const totalPendingFinance = pendingDepositsCount + pendingWithdrawalsCount;
 
-  // Calculate my total referrals count
-  const myReferralCount = allUsers.filter(u => u.referredBy?.toLowerCase() === userData?.referralCode?.toLowerCase()).length;
+  const myReferralCodeDisplay = userData?.referralCode || (userData?.name ? userData.name.replace(/\s+/g, '') + "-1234" : "N/A");
+  const myReferralCount = allUsers.filter(u => u.referredBy?.toLowerCase() === myReferralCodeDisplay.toLowerCase()).length;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col justify-between w-full overflow-x-hidden">
@@ -1600,11 +1602,11 @@ export default function App() {
                       <input 
                         type="text" 
                         readOnly
-                        value={`https://kodatask.app/register?ref=${userData?.referralCode || 'KODA1234'}`} 
+                        value={`https://kodatask.app/register?ref=${myReferralCodeDisplay}`} 
                         className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-cyan-400 font-mono"
                       />
                       <button 
-                        onClick={() => copyToClipboard(`https://kodatask.app/register?ref=${userData?.referralCode}`)} 
+                        onClick={() => copyToClipboard(`https://kodatask.app/register?ref=${myReferralCodeDisplay}`)} 
                         className="px-5 bg-blue-600 hover:bg-blue-700 text-xs font-bold rounded-xl text-white whitespace-nowrap shadow"
                       >
                         Copy Link
@@ -1747,7 +1749,7 @@ export default function App() {
                     <input 
                       type="text" 
                       disabled 
-                      value={userData?.referralCode || 'N/A'} 
+                      value={myReferralCodeDisplay} 
                       className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2.5 text-sm text-cyan-400 font-mono cursor-not-allowed"
                     />
                   </div>
@@ -1855,7 +1857,7 @@ export default function App() {
                   setSelectedTask(null);
                   alert(`Successfully collected ৳${selectedTask.reward}!`);
                 }}
-                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-bold text-white shadow-lg"
+                className="wp-full py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-bold text-white shadow-lg"
               >
                 Collect Reward (৳{selectedTask.reward})
               </button>
@@ -1986,7 +1988,7 @@ function UserAdminRow({ usr, db }) {
     const newStatus = usr.status === 'Banned' ? 'Active' : 'Banned';
     try {
       await updateDoc(doc(db, "users", usr.id), { status: newStatus });
-      alert(`User status changed to ${newStatus}`);
+      alert(`user status changed to ${newStatus}`);
     } catch (err) {
       alert("Error: " + err.message);
     }
