@@ -52,9 +52,10 @@ export default function App() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
+  const [signupReferralCode, setSignupReferralCode] = useState('');
   const [authError, setAuthError] = useState('');
 
-  // Profile editable states (only Name is editable now)
+  // Profile editable states (only Name is editable now, logout moved inside profile)
   const [profileName, setProfileName] = useState('');
 
   // Deposit gateway states matching screenshot design
@@ -75,7 +76,8 @@ export default function App() {
     nagad: "01737966207",
     rocket: "01737966207",
     binance: "KODA-PAY-USDT-ID",
-    minWithdraw: 100
+    minWithdraw: 100,
+    specialReferral: "KODA777"
   });
 
   // Default Tasks with configurable timer (in seconds) and link
@@ -169,6 +171,7 @@ export default function App() {
       deposit: "Deposit",
       withdraw: "Withdraw",
       history: "History",
+      referral: "Referral",
       profile: "Profile",
       support: "Support",
       adminPanel: "Admin Panel",
@@ -190,6 +193,7 @@ export default function App() {
       deposit: "ডিপোজিট",
       withdraw: "উইথড্র",
       history: "হিস্ট্রি",
+      referral: "রেফারেল",
       profile: "প্রোফাইল",
       support: "সাপোর্ট",
       adminPanel: "অ্যাডমিন প্যানেল",
@@ -214,7 +218,8 @@ export default function App() {
           nagad: "01737966207",
           rocket: "01737966207",
           binance: "KODA-PAY-USDT-ID",
-          minWithdraw: 100
+          minWithdraw: 100,
+          specialReferral: "KODA777"
         });
       }
     });
@@ -247,8 +252,11 @@ export default function App() {
                   name: currentUser.displayName || "Member",
                   email: currentUser.email,
                   phone: phone || "",
+                  referralCode: "KODA" + Math.floor(1000 + Math.random() * 9000),
+                  referredBy: "",
                   depositWallet: 0,
                   earningsWallet: 0,
+                  referralEarnings: 0,
                   package: null,
                   status: "Active"
                 };
@@ -335,12 +343,17 @@ export default function App() {
     setAuthError('');
     try {
       const res = await createUserWithEmailAndPassword(auth, email, password);
+      
+      const uniqueRefCode = "KODA" + Math.floor(1000 + Math.random() * 9000);
       const newUserDoc = {
         name: fullName,
         email: email,
         phone: phone,
+        referralCode: uniqueRefCode,
+        referredBy: signupReferralCode.trim() || "",
         depositWallet: 0,
         earningsWallet: 0,
+        referralEarnings: 0,
         package: null,
         status: "Active"
       };
@@ -354,12 +367,13 @@ export default function App() {
 
   const handleLogout = () => {
     signOut(auth);
+    setActiveTab('dashboard');
   };
 
   const handleSaveGateways = async () => {
     try {
       await setDoc(doc(db, "settings", "gateways"), gateways);
-      alert("Payment gateways and minimum withdrawal updated successfully!");
+      alert("Payment gateways, minimum withdrawal and special referral updated successfully!");
     } catch (err) {
       alert("Error updating gateways: " + err.message);
     }
@@ -392,6 +406,14 @@ export default function App() {
 
   const handleWithdrawSubmit = async (e) => {
     e.preventDefault();
+    
+    // Check referral rule: Must have active membership to withdraw referral/earnings
+    if (!userData?.package) {
+      alert("⚠️ You must activate a membership package to withdraw funds!");
+      setActiveTab('membership');
+      return;
+    }
+
     const amount = Number(withdrawAmount);
     const minW = Number(gateways.minWithdraw) || 100;
     if (!amount || !withdrawAccount) return;
@@ -429,19 +451,40 @@ export default function App() {
   const handleBuyPackage = async (pkg) => {
     if (!user) { setShowAuthModal(true); return; }
     if (!userData) return;
-    if (userData.depositWallet < pkg.price) {
-      alert(`Insufficient deposit balance (৳${userData.depositWallet}). Please deposit ৳${pkg.price} first!`);
+
+    let finalPrice = pkg.price;
+    // Check if user registered with special referral code or active referrer with membership
+    if (userData.referredBy === gateways.specialReferral) {
+      finalPrice = pkg.price * 0.9; // 10% discount
+    }
+
+    if (userData.depositWallet < finalPrice) {
+      alert(`Insufficient deposit balance (৳${userData.depositWallet}). Required ৳${finalPrice} (with discount if applicable)! Please deposit first!`);
       setActiveTab('deposit');
       return;
     }
+
     try {
-      const newDeposit = userData.depositWallet - pkg.price;
+      const newDeposit = userData.depositWallet - finalPrice;
       await updateDoc(doc(db, "users", user.uid), {
         depositWallet: newDeposit,
         package: pkg.name
       });
+
+      // Handle referral bonus distribution if referred by another user
+      if (userData.referredBy && userData.referredBy !== gateways.specialReferral) {
+        const refUserObj = allUsers.find(u => u.referralCode === userData.referredBy);
+        if (refUserObj && refUserObj.package) { // Both referrer and user must have membership
+          const currentRefEarnings = refUserObj.earningsWallet || 0;
+          // Calculate reward based on invite milestone logic or direct commission
+          await updateDoc(doc(db, "users", refUserObj.id), {
+            earningsWallet: currentRefEarnings + 50 // Referral bonus per active membership
+          });
+        }
+      }
+
       setUserData({ ...userData, depositWallet: newDeposit, package: pkg.name });
-      alert(`Successfully activated ${pkg.name}!`);
+      alert(`Successfully activated ${pkg.name} for ৳${finalPrice}!`);
     } catch (err) {
       alert("Error: " + err.message);
     }
@@ -469,6 +512,7 @@ export default function App() {
     { id: 'membership', label: t[lang].membership },
     { id: 'deposit', label: t[lang].deposit },
     { id: 'withdraw', label: t[lang].withdraw },
+    { id: 'referral', label: t[lang].referral },
     { id: 'history', label: t[lang].history },
   ];
 
@@ -481,6 +525,9 @@ export default function App() {
   const pendingDepositsCount = allDeposits.filter(d => d.status === 'Pending Verification' || d.status === 'Pending').length;
   const pendingWithdrawalsCount = allWithdrawals.filter(w => w.status === 'Pending').length;
   const totalPendingFinance = pendingDepositsCount + pendingWithdrawalsCount;
+
+  // Calculate my total referrals count
+  const myReferralCount = allUsers.filter(u => u.referredBy === userData?.referralCode).length;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col justify-between w-full overflow-x-hidden">
@@ -518,7 +565,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Fully responsive wrapped/scrollable navigation tabs for mobile */}
+            {/* Fully responsive wrapped/scrollable navigation tabs for mobile with Referral on slide */}
             <nav className="flex items-center space-x-1 md:space-x-4 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-none flex-nowrap md:flex-wrap justify-start md:justify-center">
               {tabs.map((tab) => {
                 const isActive = activeTab === tab.id;
@@ -561,12 +608,6 @@ export default function App() {
                     <span className="text-xs text-slate-200 font-medium truncate max-w-[100px]">
                       {isAdmin ? 'Admin' : userData?.name || user.email}
                     </span>
-                  </button>
-                  <button 
-                    onClick={handleLogout}
-                    className="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-xs rounded-lg font-medium text-white"
-                  >
-                    {t[lang].logout}
                   </button>
                 </div>
               ) : (
@@ -950,7 +991,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* Sub-Tab 6: Payment Numbers & Limits */}
+              {/* Sub-Tab 6: Payment Numbers & Limits & Special Referral Setup */}
               {adminSubTab === 'gateways' && (
                 <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-2xl shadow-xl space-y-6">
                   <h3 className="text-lg font-semibold mb-2 text-slate-200">Payment Numbers & Withdrawal Limits</h3>
@@ -1010,12 +1051,23 @@ export default function App() {
                         />
                       </div>
                     </div>
+                    <div>
+                      <label className="text-xs text-slate-400">Special Admin Referral Code (10% Discount)</label>
+                      <div className="flex mt-1 space-x-2">
+                        <input 
+                          type="text" 
+                          value={gateways.specialReferral || "KODA777"} 
+                          onChange={(e)=>setGateways({...gateways, specialReferral: e.target.value})} 
+                          className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white font-mono"
+                        />
+                      </div>
+                    </div>
                   </div>
                   <button 
                     onClick={handleSaveGateways}
                     className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-sm font-bold rounded-xl text-white shadow-lg"
                   >
-                    Save All Payment Settings
+                    Save All Settings & Gateways
                   </button>
                 </div>
               )}
@@ -1124,49 +1176,65 @@ export default function App() {
               <div className="text-center max-w-2xl mx-auto mb-8">
                 <h2 className="text-2xl md:text-3xl font-bold text-amber-400 mb-2">Select Membership Plan</h2>
                 <p className="text-xs md:text-sm text-slate-400">Choose a tier that fits your daily availability. Upgrades take effect immediately and quota resets every 24 hours.</p>
+                {userData?.referredBy === gateways.specialReferral && (
+                  <div className="mt-3 inline-block bg-emerald-950 text-emerald-400 px-4 py-1.5 rounded-full text-xs font-bold border border-emerald-800">
+                    🎉 Special Referral Applied: 10% Discount on All Memberships!
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {packages.map((pkg, idx) => (
-                  <div key={pkg.id || idx} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between space-y-6 hover:border-amber-500/50 transition shadow-xl relative overflow-hidden">
-                    <div>
-                      <h3 className="text-xl font-bold text-slate-100">{pkg.name}</h3>
-                      <p className="text-xs text-slate-400 mt-1 min-h-[32px]">{pkg.desc}</p>
-                      
-                      <div className="my-6">
-                        <span className="text-3xl font-extrabold text-amber-400">৳{pkg.price}</span>
-                        <span className="text-xs text-slate-400"> / {pkg.validity}</span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 bg-slate-950 p-3 rounded-xl border border-slate-800/80 mb-6 text-center">
-                        <div>
-                          <p className="text-[10px] text-slate-400 uppercase tracking-wider">Daily Limit</p>
-                          <p className="text-sm font-bold text-slate-200 mt-0.5">{pkg.dailyTasks} Tasks</p>
+                {packages.map((pkg, idx) => {
+                  const hasDiscount = userData?.referredBy === gateways.specialReferral;
+                  const effectivePrice = hasDiscount ? pkg.price * 0.9 : pkg.price;
+                  return (
+                    <div key={pkg.id || idx} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between space-y-6 hover:border-amber-500/50 transition shadow-xl relative overflow-hidden">
+                      <div>
+                        <h3 className="text-xl font-bold text-slate-100">{pkg.name}</h3>
+                        <p className="text-xs text-slate-400 mt-1 min-h-[32px]">{pkg.desc}</p>
+                        
+                        <div className="my-6">
+                          {hasDiscount ? (
+                            <div>
+                              <span className="text-xl text-slate-500 line-through mr-2">৳{pkg.price}</span>
+                              <span className="text-3xl font-extrabold text-emerald-400">৳{effectivePrice}</span>
+                            </div>
+                          ) : (
+                            <span className="text-3xl font-extrabold text-amber-400">৳{pkg.price}</span>
+                          )}
+                          <span className="text-xs text-slate-400"> / {pkg.validity}</span>
                         </div>
-                        <div>
-                          <p className="text-[10px] text-slate-400 uppercase tracking-wider">Daily Potential</p>
-                          <p className="text-sm font-bold text-emerald-400 mt-0.5">৳{pkg.dailyPotential}</p>
-                        </div>
-                      </div>
 
-                      <div className="space-y-2.5">
-                        {pkg.features?.map((feat, fIdx) => (
-                          <div key={fIdx} className="flex items-start space-x-2 text-xs text-slate-300">
-                            <span className="text-emerald-400 font-bold">✓</span>
-                            <span>{feat}</span>
+                        <div className="grid grid-cols-2 gap-2 bg-slate-950 p-3 rounded-xl border border-slate-800/80 mb-6 text-center">
+                          <div>
+                            <p className="text-[10px] text-slate-400 uppercase tracking-wider">Daily Limit</p>
+                            <p className="text-sm font-bold text-slate-200 mt-0.5">{pkg.dailyTasks} Tasks</p>
                           </div>
-                        ))}
-                      </div>
-                    </div>
+                          <div>
+                            <p className="text-[10px] text-slate-400 uppercase tracking-wider">Daily Potential</p>
+                            <p className="text-sm font-bold text-emerald-400 mt-0.5">৳{pkg.dailyPotential}</p>
+                          </div>
+                        </div>
 
-                    <button 
-                      onClick={() => handleBuyPackage(pkg)}
-                      className="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-xl font-bold text-white text-sm shadow-lg shadow-amber-900/20 transition"
-                    >
-                      Deposit ৳{pkg.price} to Activate &gt;
-                    </button>
-                  </div>
-                ))}
+                        <div className="space-y-2.5">
+                          {pkg.features?.map((feat, fIdx) => (
+                            <div key={fIdx} className="flex items-start space-x-2 text-xs text-slate-300">
+                              <span className="text-emerald-400 font-bold">✓</span>
+                              <span>{feat}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <button 
+                        onClick={() => handleBuyPackage(pkg)}
+                        className="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-xl font-bold text-white text-sm shadow-lg shadow-amber-900/20 transition"
+                      >
+                        Deposit ৳{effectivePrice} to Activate &gt;
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
 
               <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-center text-xs text-slate-400 gap-3">
@@ -1354,6 +1422,15 @@ export default function App() {
                 <p className="text-xs text-slate-400 mt-0.5">Transfer earnings directly to your personal mobile banking account. Requests are audited and settled with verifiable reference IDs.</p>
               </div>
 
+              {!userData?.package && (
+                <div className="bg-amber-950/80 border border-amber-800 text-amber-200 p-4 rounded-xl text-xs flex items-center justify-between">
+                  <span>⚠️ <strong>Notice:</strong> You must have an active membership package to withdraw referral/earnings rewards.</span>
+                  <button onClick={() => setActiveTab('membership')} className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg whitespace-nowrap ml-2">
+                    Buy Package
+                  </button>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6">
                   <div className="flex justify-between items-center bg-slate-950 p-4 rounded-xl border border-slate-800">
@@ -1488,6 +1565,86 @@ export default function App() {
                 </div>
               </div>
             </div>
+          ) : activeTab === 'referral' ? (
+            <div className="space-y-6 max-w-4xl mx-auto">
+              <div>
+                <h2 className="text-2xl md:text-3xl font-bold text-amber-400 tracking-wide">Referral Program & Rewards</h2>
+                <p className="text-xs text-slate-400 mt-1">Invite friends and earn rewards when they activate their memberships.</p>
+              </div>
+
+              {!userData?.package ? (
+                <div className="bg-slate-900 border border-amber-500/30 p-8 rounded-2xl shadow-2xl text-center space-y-4">
+                  <div className="text-5xl">🔒</div>
+                  <h3 className="text-xl font-bold text-slate-100">Referral Program Locked</h3>
+                  <p className="text-xs text-slate-400 max-w-md mx-auto">
+                    The referral system and unique referral link are unlocked exclusively for members who have purchased and activated a membership package. Normal users can view details below but cannot generate codes or earn referral bonuses yet.
+                  </p>
+                  <button 
+                    onClick={() => setActiveTab('membership')} 
+                    className="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold rounded-xl shadow-lg transition"
+                  >
+                    Unlock Referral by Purchasing Membership Now &gt;
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6">
+                  <div>
+                    <label className="text-xs text-slate-400 block mb-1 font-medium">Your Unique Referral Code & Link</label>
+                    <div className="flex space-x-2">
+                      <input 
+                        type="text" 
+                        readOnly
+                        value={`https://kodatask.app/register?ref=${userData?.referralCode || 'KODA1234'}`} 
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-cyan-400 font-mono"
+                      />
+                      <button 
+                        onClick={() => copyToClipboard(`https://kodatask.app/register?ref=${userData?.referralCode}`)} 
+                        className="px-5 bg-blue-600 hover:bg-blue-700 text-xs font-bold rounded-xl text-white whitespace-nowrap shadow"
+                      >
+                        Copy Link
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                      <p className="text-[10px] text-slate-400 uppercase">Total Referrals</p>
+                      <p className="text-2xl font-bold text-blue-400 mt-1">{myReferralCount} Users</p>
+                    </div>
+                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                      <p className="text-[10px] text-slate-400 uppercase">Referral Earnings</p>
+                      <p className="text-2xl font-bold text-emerald-400 mt-1">৳{userData?.referralEarnings || 0}</p>
+                    </div>
+                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                      <p className="text-[10px] text-slate-400 uppercase">Special Discount Status</p>
+                      <p className="text-xs font-bold text-amber-400 mt-2">Active (10% Off)</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Milestones Info Card */}
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4">
+                <h3 className="text-lg font-semibold text-slate-200">Milestone Rewards Structure</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1">
+                    <p className="font-bold text-amber-400">10 Invites</p>
+                    <p className="text-slate-300">Reward: <strong className="text-emerald-400">৳500</strong> Cash Bonus</p>
+                    <p className="text-[10px] text-slate-500">(Must have active membership)</p>
+                  </div>
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1">
+                    <p className="font-bold text-amber-400">20 Invites</p>
+                    <p className="text-slate-300">Reward: <strong className="text-emerald-400">৳1,500</strong> Cash Bonus</p>
+                    <p className="text-[10px] text-slate-500">(Must have active membership)</p>
+                  </div>
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1">
+                    <p className="font-bold text-amber-400">50 Invites</p>
+                    <p className="text-slate-300">Reward: <strong className="text-emerald-400">৳3,000</strong> Cash Bonus</p>
+                    <p className="text-[10px] text-slate-500">(Must have active membership)</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : activeTab === 'history' ? (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-blue-400">Transaction History Log</h2>
@@ -1537,7 +1694,7 @@ export default function App() {
                 <span>👤</span>
                 <span>User Profile Settings</span>
               </h2>
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4 shadow-xl">
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-5 shadow-xl">
                 <form onSubmit={async (e) => {
                   e.preventDefault();
                   if (!user) return;
@@ -1580,6 +1737,15 @@ export default function App() {
                     />
                   </div>
                   <div>
+                    <label className="text-xs text-slate-400">Unique Referral Code</label>
+                    <input 
+                      type="text" 
+                      disabled 
+                      value={userData?.referralCode || 'N/A'} 
+                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2.5 text-sm text-cyan-400 font-mono cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
                     <label className="text-xs text-slate-400">Active Membership Package</label>
                     <input 
                       type="text" 
@@ -1592,6 +1758,16 @@ export default function App() {
                     Save Profile Name
                   </button>
                 </form>
+
+                {/* Logout Button moved inside Profile */}
+                <div className="pt-4 border-t border-slate-800">
+                  <button 
+                    onClick={handleLogout}
+                    className="w-full py-3 bg-red-600 hover:bg-red-700 rounded-xl font-bold text-white text-sm shadow-lg transition"
+                  >
+                    🚪 Logout Account
+                  </button>
+                </div>
               </div>
             </div>
           ) : activeTab === 'support' ? (
@@ -1690,7 +1866,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Auth Modal */}
+      {/* Auth Modal with Referral Input */}
       {showAuthModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-md w-full space-y-4 shadow-2xl">
@@ -1713,7 +1889,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-slate-400">Mobile Number</label>
+                    <label className="text-xs text-slate-400">Mobile Number (Unchangeable after signup)</label>
                     <input 
                       type="text" 
                       required 
@@ -1722,10 +1898,20 @@ export default function App() {
                       className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
                     />
                   </div>
+                  <div>
+                    <label className="text-xs text-slate-400">Referral Code (Optional)</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. KODA777 or user code"
+                      value={signupReferralCode} 
+                      onChange={(e)=>setSignupReferralCode(e.target.value)} 
+                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-cyan-400 font-mono"
+                    />
+                  </div>
                 </>
               )}
               <div>
-                <label className="text-xs text-slate-400">Email Address</label>
+                <label className="text-xs text-slate-400">Email Address (Unchangeable after signup)</label>
                 <input 
                   type="email" 
                   required 
@@ -1805,7 +1991,8 @@ function UserAdminRow({ usr, db }) {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
         <div>
           <p className="text-sm font-medium text-slate-200">{usr.name || 'No Name'} ({usr.email})</p>
-          <p className="text-xs text-slate-400">Phone: {usr.phone || 'N/A'} | Package: <span className="text-amber-400">{usr.package || 'None'}</span> | Status: <span className={usr.status === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
+          <p className="text-xs text-slate-400">Phone: {usr.phone || 'N/A'} | Ref Code: <span className="text-cyan-400 font-mono">{usr.referralCode || 'N/A'}</span> | Referred By: <span className="text-indigo-400">{usr.referredBy || 'None'}</span></p>
+          <p className="text-xs text-slate-400">Package: <span className="text-amber-400">{usr.package || 'None'}</span> | Status: <span className={usr.status === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
         </div>
         {usr.email !== '1roxi1@gmail.com' && (
           <button 
