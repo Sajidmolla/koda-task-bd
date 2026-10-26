@@ -354,6 +354,26 @@ export default function App() {
     return () => clearInterval(interval);
   }, [timerActive, timer]);
 
+  // Professional error message translator to hide Firebase technical jargon
+  const getFriendlyErrorMessage = (errorCode) => {
+    switch (errorCode) {
+      case 'auth/invalid-credential':
+      case 'auth/wrong-password':
+      case 'auth/user-not-found':
+        return 'Incorrect email or password. Please try again.';
+      case 'auth/email-already-in-use':
+        return 'This email address is already in use. Please use another email or sign in.';
+      case 'auth/weak-password':
+        return 'Password should be at least 6 characters long.';
+      case 'auth/invalid-email':
+        return 'Please enter a valid email address.';
+      case 'auth/too-many-requests':
+        return 'Access temporarily blocked due to many failed attempts. Try again later.';
+      default:
+        return 'An error occurred during authentication. Please check your details and try again.';
+    }
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setAuthError('');
@@ -361,7 +381,7 @@ export default function App() {
       await signInWithEmailAndPassword(auth, email, password);
       setShowAuthModal(false);
     } catch (err) {
-      setAuthError(err.message);
+      setAuthError(getFriendlyErrorMessage(err.code));
     }
   };
 
@@ -390,7 +410,7 @@ export default function App() {
       setUserData(newUserDoc);
       setShowAuthModal(false);
     } catch (err) {
-      setAuthError(err.message);
+      setAuthError(getFriendlyErrorMessage(err.code));
     }
   };
 
@@ -1841,7 +1861,7 @@ export default function App() {
 
           <div className="items-center space-x-4 flex">
             <a 
-              href="https://t.me/Yours_support_admin" 
+              href="https://t.me/Yours_support_admin/register?ref=..." 
               target="_blank" 
               rel="noopener noreferrer"
               className="flex items-center space-x-1.5 bg-sky-600 hover:bg-sky-700 text-white px-3 py-1.5 rounded-lg font-semibold text-xs shadow transition"
@@ -1944,7 +1964,7 @@ export default function App() {
                   type="email" 
                   required 
                   value={email} 
-                  onChange={(e)=>setEmail(e.target.value)} 
+                  onChange={(e)=>setEmail(e.that?.value || e.target.value)} 
                   className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
                 />
               </div>
@@ -1963,7 +1983,7 @@ export default function App() {
                 type="submit" 
                 className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-white shadow-lg"
               >
-                {authMode === 'login' ? 'Sign In' : 'Register Account'}
+                {authMode === 'login' ? 'Sign Sign' : 'Register Account'}
               </button>
             </form>
 
