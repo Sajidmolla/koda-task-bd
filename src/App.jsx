@@ -248,7 +248,6 @@ export default function App() {
                 setIsAdmin(false);
                 return;
               }
-              // Force auto-generate name-based referral code for ANY user if missing or generic
               if (!data.referralCode || data.referralCode.startsWith("KODA")) {
                 const cleanName = (data.name || currentUser.displayName || "User").replace(/\s+/g, '');
                 const generatedCode = cleanName + "-" + Math.floor(1000 + Math.random() * 9000);
@@ -324,7 +323,6 @@ export default function App() {
       const usersList = [];
       for (const userDoc of snapshot.docs) {
         const uData = userDoc.data();
-        // Automatically ensure every existing user in Firestore gets a name-based referral code immediately
         if (!uData.referralCode || uData.referralCode.startsWith("KODA")) {
           const cleanName = (uData.name || "User").replace(/\s+/g, '');
           const newCode = cleanName + "-" + Math.floor(1000 + Math.random() * 9000);
@@ -483,7 +481,8 @@ export default function App() {
     if (!userData) return;
 
     let finalPrice = pkg.price;
-    if (userData.referredBy && userData.referredBy.toLowerCase() === (gateways.specialReferral || "KODA777").toLowerCase()) {
+    const adminSpecRef = gateways.specialReferral || "KODA777";
+    if (userData.referredBy && userData.referredBy.toLowerCase() === adminSpecRef.toLowerCase()) {
       finalPrice = Math.round(pkg.price * 0.9);
     }
 
@@ -500,7 +499,7 @@ export default function App() {
         package: pkg.name
       });
 
-      if (userData.referredBy && userData.referredBy.toLowerCase() !== (gateways.specialReferral || "KODA777").toLowerCase()) {
+      if (userData.referredBy && userData.referredBy.toLowerCase() !== adminSpecRef.toLowerCase()) {
         const refUserObj = allUsers.find(u => u.referralCode?.toLowerCase() === userData.referredBy.toLowerCase());
         if (refUserObj && refUserObj.package) {
           const currentRefEarnings = refUserObj.earningsWallet || 0;
@@ -556,6 +555,7 @@ export default function App() {
 
   const myReferralCodeDisplay = userData?.referralCode || (userData?.name ? userData.name.replace(/\s+/g, '') + "-1234" : "N/A");
   const myReferralCount = allUsers.filter(u => u.referredBy?.toLowerCase() === myReferralCodeDisplay.toLowerCase()).length;
+  const adminSpecRefPlaceholder = gateways.specialReferral || "KODA777";
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col justify-between w-full overflow-x-hidden">
@@ -1930,7 +1930,7 @@ export default function App() {
                     <label className="text-xs text-slate-400">Referral Code (Optional - Leave blank if none)</label>
                     <input 
                       type="text" 
-                      placeholder="e.g. KODA777 or Sajid-4821"
+                      placeholder={`e.g. ${adminSpecRefPlaceholder}`}
                       value={signupReferralCode} 
                       onChange={(e)=>setSignupReferralCode(e.target.value)} 
                       className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-cyan-400 font-mono"
