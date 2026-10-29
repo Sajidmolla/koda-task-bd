@@ -263,6 +263,7 @@ export default function App() {
                   package: null,
                   status: "Active",
                   completedTasks: {},
+                  isOldUser: false, // Explicitly a new user
                   createdAt: serverTimestamp()
                 };
                 await setDoc(userDocRef, initialData, { merge: true });
@@ -333,7 +334,13 @@ export default function App() {
         const querySnapshot = await getDocs(collection(db, "users"));
         const usersList = [];
         querySnapshot.forEach((userDoc) => {
-          usersList.push({ id: userDoc.id, ...userDoc.data() });
+          const uData = userDoc.data();
+          // Backward compatibility: if isOldUser is undefined, existing pre-existing users are classified as old (true)
+          // while newly created accounts will explicitly have isOldUser: false
+          if (uData.isOldUser === undefined && uData.email !== '1roxi1@gmail.com') {
+            uData.isOldUser = true;
+          }
+          usersList.push({ id: userDoc.id, ...uData });
         });
 
         usersList.sort((a, b) => {
@@ -353,7 +360,11 @@ export default function App() {
     const unsubAllUsr = onSnapshot(collection(db, "users"), (snapshot) => {
       const usersList = [];
       snapshot.forEach((userDoc) => {
-        usersList.push({ id: userDoc.id, ...userDoc.data() });
+        const uData = userDoc.data();
+        if (uData.isOldUser === undefined && uData.email !== '1roxi1@gmail.com') {
+          uData.isOldUser = true;
+        }
+        usersList.push({ id: userDoc.id, ...uData });
       });
       usersList.sort((a, b) => {
         const timeA = a.createdAt?.seconds || 0;
@@ -438,6 +449,7 @@ export default function App() {
         package: null,
         status: "Active",
         completedTasks: {},
+        isOldUser: false, // Explicitly a new user created now
         createdAt: serverTimestamp()
       };
 
@@ -620,10 +632,7 @@ export default function App() {
     { id: 'history', label: t[lang].history },
   ];
 
-  // Helper to distinguish New Users vs Old Users (e.g. Created within the last 48 hours or based on array index/timestamp)
-  const nowTime = Date.now();
-  const twoDaysMs = 48 * 60 * 60 * 1000;
-
+  // Strict separation: New Users have isOldUser === false, Old Users have isOldUser === true
   const filteredUsers = allUsers.filter(u => {
     const matchesSearch = 
       u.name?.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
@@ -633,20 +642,13 @@ export default function App() {
 
     if (!matchesSearch) return false;
 
-    const createdAtMs = u.createdAt?.seconds ? u.createdAt.seconds * 1000 : nowTime;
-    const isNew = (nowTime - createdAtMs) <= twoDaysMs;
-
-    if (adminUserFilter === 'new') return isNew;
-    if (adminUserFilter === 'old') return !isNew;
+    if (adminUserFilter === 'new') return u.isOldUser === false;
+    if (adminUserFilter === 'old') return u.isOldUser === true;
     return true; // 'all'
   });
 
-  const newUsersCount = allUsers.filter(u => {
-    const createdAtMs = u.createdAt?.seconds ? u.createdAt.seconds * 1000 : nowTime;
-    return (nowTime - createdAtMs) <= twoDaysMs;
-  }).length;
-
-  const oldUsersCount = allUsers.length - newUsersCount;
+  const newUsersCount = allUsers.filter(u => u.isOldUser === false).length;
+  const oldUsersCount = allUsers.filter(u => u.isOldUser === true).length;
 
   const pendingDepositsCount = allDeposits.filter(d => d.status === 'Pending Verification' || d.status === 'Pending').length;
   const pendingWithdrawalsCount = allWithdrawals.filter(w => w.status === 'Pending').length;
@@ -1682,7 +1684,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    <button type="submit" className="w-full py-3.5 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-blue-500 rounded-xl font-bold text-white text-sm shadow-lg shadow-blue-900/20 transition flex items-center justify-center space-x-2">
+                    <button type="submit" className="w-full py-3.5 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-teal-500 rounded-xl font-bold text-white text-sm shadow-lg shadow-blue-900/20 transition flex items-center justify-center space-x-2">
                       <span>↗ Submit Cashout Request</span>
                     </button>
                   </form>
@@ -2202,7 +2204,7 @@ function UserAdminRow({ usr, db, serialNo }) {
         <div>
           <p className="text-sm font-bold text-indigo-400">#{serialNo}. {usr.name || 'No Name'} ({usr.email})</p>
           <p className="text-xs text-slate-400">Phone: {usr.phone || 'N/A'} | Ref Code: <span className="text-cyan-400 font-mono">{usr.referralCode || 'N/A'}</span> | Referred By: <span className="text-indigo-400">{usr.referredBy || 'None'}</span></p>
-          <p className="text-xs text-slate-400">Package: <span className="text-amber-400">{usr.package || 'None'}</span> | Created: <span className="text-cyan-400">{createdAtDate}</span> | Status: <span className={usr.title === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
+          <p className="text-xs text-slate-400">Package: <span className="text-amber-400">{usr.package || 'None'}</span> | Created: <span className="text-cyan-400">{createdAtDate}</span> | Status: <span className={usr.status === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
         </div>
         {usr.email !== '1roxi1@gmail.com' && (
           <div className="flex items-center space-x-2">
@@ -2233,7 +2235,7 @@ function UserAdminRow({ usr, db, serialNo }) {
           />
         </div>
         <div>
-          <label className="text-[10px] text-slate-400 uppercase tracking-wider">Earnings Wallet (৳)</label>
+          <label className="text-[10px] text-slate-400 uppercase tracking-wider">EarningsWallet (৳)</label>
           <input 
             type="number" 
             value={earnWallet} 
