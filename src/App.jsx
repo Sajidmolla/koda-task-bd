@@ -333,7 +333,7 @@ export default function App() {
       setAllWithdrawals(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // ABSOLUTE UNFILTERED USER LIST LISTENER WITH LAZY BACKFILL TO GUARANTEE 100% VISIBILITY OF ALL 49+ USERS
+    // 100% BULLETPROOF USER LIST LISTENER (NO EXCLUSIONS, NO CRASHING, HANDLES ALL OLD/NEW USERS GRACEFULLY)
     const unsubAllUsr = onSnapshot(collection(db, "users"), async (snapshot) => {
       const usersList = [];
       for (const userDoc of snapshot.docs) {
@@ -361,7 +361,7 @@ export default function App() {
         usersList.push({ id: userDoc.id, ...uData });
       }
 
-      // Safe sorting that puts oldest first, and handles legacy users safely without filtering them out
+      // Safe sorting: Oldest first, fallback gracefully for any legacy docs without timestamps
       usersList.sort((a, b) => {
         const timeA = a.createdAt?.seconds || 0;
         const timeB = b.createdAt?.seconds || 0;
