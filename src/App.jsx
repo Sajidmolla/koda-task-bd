@@ -154,7 +154,7 @@ export default function App() {
   // User personal history & completed tasks states
   const [myDeposits, setMyDeposits] = useState([]);
   const [myWithdrawals, setMyWithdrawals] = useState([]);
-  const [completedTasks, setCompletedTasks] = useState({}); // { taskId: timestamp }
+  const [completedTasks, setCompletedTasks] = useState({});
 
   const [selectedTask, setSelectedTask] = useState(null);
   const [timer, setTimer] = useState(25);
@@ -271,7 +271,8 @@ export default function App() {
                 referralEarnings: 0,
                 package: null,
                 status: "Active",
-                completedTasks: {}
+                completedTasks: {},
+                createdAt: serverTimestamp()
               };
               await setDoc(userDocRef, initialData);
               setUserData(initialData);
@@ -360,7 +361,6 @@ export default function App() {
     return () => clearInterval(interval);
   }, [timerActive, timer]);
 
-  // Professional error message translator to hide Firebase technical jargon
   const getFriendlyErrorMessage = (errorCode) => {
     switch (errorCode) {
       case 'auth/invalid-credential':
@@ -411,7 +411,8 @@ export default function App() {
         referralEarnings: 0,
         package: null,
         status: "Active",
-        completedTasks: {}
+        completedTasks: {},
+        createdAt: serverTimestamp()
       };
       await setDoc(doc(db, "users", res.user.uid), newUserDoc);
       setUserData(newUserDoc);
@@ -514,7 +515,7 @@ export default function App() {
     }
 
     if (userData.depositWallet < finalPrice) {
-      alert(`Insufficient deposit balance (৳${userData.depositWallet}). Required ৳${finalPrice} (with discount if applicable)! Please deposit first!`);
+      alert(`Insufficient deposit balance (৳{userData.depositWallet}). Required ৳${finalPrice} (with discount if applicable)! Please deposit first!`);
       setActiveTab('deposit');
       return;
     }
@@ -548,7 +549,6 @@ export default function App() {
     alert("Copied to clipboard: " + text);
   };
 
-  // Check if task is locked (completed within last 24 hours)
   const isTaskLocked = (taskId) => {
     const lastCompleted = completedTasks[taskId];
     if (!lastCompleted) return false;
@@ -777,7 +777,12 @@ export default function App() {
                           <div key={dep.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-xl border border-slate-800 gap-2">
                             <div>
                               <p className="text-sm font-medium text-slate-200">{dep.email} - ৳{dep.amount} ({dep.method}) [Target: {dep.targetTier || 'Direct Credit'}]</p>
-                              <p className="text-xs text-slate-400">TrxID: <span className="text-blue-400 font-mono">{dep.trxId}</span> | Sender Phone: <span className="text-emerald-400 font-mono">{dep.senderPhone || 'N/A'}</span> | Status: <span className="text-amber-400">{dep.status}</span></p>
+                              <p className="text-xs text-slate-400">
+                                TrxID: <span className="text-blue-400 font-mono">{dep.trxId}</span> | 
+                                Sender: <span className="text-emerald-400 font-mono">{dep.senderPhone || 'N/A'}</span> | 
+                                Date: <span className="text-slate-300">{dep.timestamp ? new Date(dep.timestamp.seconds * 1000).toLocaleString() : 'Just now'}</span> | 
+                                Status: <span className="text-amber-400">{dep.status}</span>
+                              </p>
                             </div>
                             {(dep.status === 'Pending Verification' || dep.status === 'Pending') && (
                               <button 
@@ -810,7 +815,11 @@ export default function App() {
                           <div key={wit.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-xl border border-slate-800 gap-3">
                             <div>
                               <p className="text-sm font-medium text-slate-200">{wit.email} - ৳{wit.amount} ({wit.method})</p>
-                              <p className="text-xs text-slate-400">Account: <span className="text-emerald-400 font-mono">{wit.account}</span> | Status: <span className="text-amber-400">{wit.status}</span></p>
+                              <p className="text-xs text-slate-400">
+                                Account: <span className="text-emerald-400 font-mono">{wit.account}</span> | 
+                                Date: <span className="text-slate-300">{wit.timestamp ? new Date(wit.timestamp.seconds * 1000).toLocaleString() : 'Just now'}</span> | 
+                                Status: <span className="text-amber-400">{wit.status}</span>
+                              </p>
                             </div>
                             
                             {wit.status === 'Pending' && (
@@ -1038,7 +1047,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* Sub-Tab 5: User Control (Matching user screenshot style) */}
+              {/* Sub-Tab 5: User Control with Serial Number and Creation Date */}
               {adminSubTab === 'users' && (
                 <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-2xl shadow-xl space-y-6">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -1059,8 +1068,8 @@ export default function App() {
 
                   <div className="space-y-4 pt-2">
                     {filteredUsers.length === 0 ? <p className="text-xs text-slate-500 text-center py-6">No users found.</p> : 
-                      filteredUsers.map(usr => (
-                        <UserAdminRow key={usr.id} usr={usr} db={db} />
+                      filteredUsers.map((usr, index) => (
+                        <UserAdminRow key={usr.id} usr={usr} db={db} serialNo={index + 1} />
                       ))
                     }
                   </div>
@@ -1880,7 +1889,7 @@ export default function App() {
               </h2>
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4 text-center">
                 <div className="text-4xl">💬</div>
-                <h3 className="text-lg font-bold text-slate100">Need Help with Deposit or Task?</h3>
+                <h3 className="text-lg font-bold text-slate-100">Need Help with Deposit or Task?</h3>
                 <p className="text-xs text-slate-400">Our support team is available 24/7 to help you out with any payment or account issues.</p>
                 <div className="pt-4 space-y-3">
                   <a 
@@ -1915,7 +1924,7 @@ export default function App() {
 
           <div className="items-center space-x-4 flex">
             <a 
-              href="https://t.me/Yours_support_admin/register?ref=..." 
+              href="https://t.me/Yours_support_admin" 
               target="_blank" 
               rel="noopener noreferrer"
               className="flex items-center space-x-1.5 bg-sky-600 hover:bg-sky-700 text-white px-3 py-1.5 rounded-lg font-semibold text-xs shadow transition"
@@ -1946,8 +1955,16 @@ export default function App() {
                     return;
                   }
                   const newEarnings = (userData.earningsWallet || 0) + selectedTask.reward;
-                  await updateDoc(doc(db, "users", user.uid), { earningsWallet: newEarnings });
-                  setUserData({...userData, earningsWallet: newEarnings});
+                  const taskKey = selectedTask.id;
+                  const updatedCompleted = { ...(userData.completedTasks || {}), [taskKey]: Date.now() };
+                  
+                  await updateDoc(doc(db, "users", user.uid), { 
+                    earningsWallet: newEarnings,
+                    completedTasks: updatedCompleted
+                  });
+                  
+                  setUserData({...userData, earningsWallet: newEarnings, completedTasks: updatedCompleted});
+                  setCompletedTasks(updatedCompleted);
                   setSelectedTask(null);
                   alert(`Successfully collected ৳${selectedTask.reward}!`);
                 }}
@@ -2018,7 +2035,7 @@ export default function App() {
                   type="email" 
                   required 
                   value={email} 
-                  onChange={(e)=>setEmail(e.that?.value || e.target.value)} 
+                  onChange={(e)=>setEmail(e.target.value)} 
                   className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
                 />
               </div>
@@ -2037,7 +2054,7 @@ export default function App() {
                 type="submit" 
                 className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-white shadow-lg"
               >
-                {authMode === 'login' ? 'Sign Sign' : 'Register Account'}
+                {authMode === 'login' ? 'Sign In' : 'Register Account'}
               </button>
             </form>
 
@@ -2062,7 +2079,7 @@ export default function App() {
   );
 }
 
-function UserAdminRow({ usr, db }) {
+function UserAdminRow({ usr, db, serialNo }) {
   const [depWallet, setDepWallet] = useState(usr.depositWallet || 0);
   const [earnWallet, setEarnWallet] = useState(usr.earningsWallet || 0);
 
@@ -2082,26 +2099,28 @@ function UserAdminRow({ usr, db }) {
     const newStatus = usr.status === 'Banned' ? 'Active' : 'Banned';
     try {
       await updateDoc(doc(db, "users", usr.id), { status: newStatus });
-      alert(`user status changed to ${newStatus}`);
+      alert(`User status changed to ${newStatus}`);
     } catch (err) {
       alert("Error: " + err.message);
     }
   };
 
+  const createdAtDate = usr.createdAt?.seconds ? new Date(usr.createdAt.seconds * 1000).toLocaleString() : 'N/A';
+
   return (
     <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
         <div>
-          <p className="text-sm font-medium text-slate-200">{usr.name || 'No Name'} ({usr.email})</p>
+          <p className="text-sm font-bold text-indigo-400">#{serialNo}. {usr.name || 'No Name'} ({usr.email})</p>
           <p className="text-xs text-slate-400">Phone: {usr.phone || 'N/A'} | Ref Code: <span className="text-cyan-400 font-mono">{usr.referralCode || 'N/A'}</span> | Referred By: <span className="text-indigo-400">{usr.referredBy || 'None'}</span></p>
-          <p className="text-xs text-slate-400">Package: <span className="text-amber-400">{usr.package || 'None'}</span> | Status: <span className={usr.status === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
+          <p className="text-xs text-slate-400">Package: <span className="text-amber-400">{usr.package || 'None'}</span> | Created: <span className="text-slate-300">{createdAtDate}</span> | Status: <span className={usr.status === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
         </div>
         {usr.email !== '1roxi1@gmail.com' && (
           <button 
             onClick={handleToggleBan}
             className={`px-3 py-1.5 text-xs font-semibold rounded-lg text-white ${usr.status === 'Banned' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}
           >
-            {usr.status === 'Banned' ? 'Unban User' : 'Ban Data'}
+            {usr.status === 'Banned' ? 'Unban User' : 'Ban User'}
           </button>
         )}
       </div>
@@ -2120,14 +2139,14 @@ function UserAdminRow({ usr, db }) {
           <label className="text-[10px] text-slate-400 uppercase tracking-wider">Earnings Wallet (৳)</label>
           <input 
             type="number" 
-            value= {earnWallet} 
+            value={earnWallet} 
             onChange={(e)=>setEarnWallet(e.target.value)} 
             className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
           />
         </div>
         <div className="flex items-end h-full pt-1 sm:pt-4">
           <button 
-            onClick={handleUpdateButtonHandler => handleUpdateBalance()}
+            onClick={handleUpdateBalance}
             className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-xs font-bold rounded-lg text-white shadow"
           >
             Update Balances
