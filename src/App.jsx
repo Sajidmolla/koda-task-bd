@@ -47,6 +47,7 @@ export default function App() {
   const [authMode, setAuthMode] = useState('login');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [submittingAuth, setSubmittingAuth] = useState(false);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -248,11 +249,17 @@ export default function App() {
                 setIsAdmin(false);
                 return;
               }
+              let updates = {};
               if (!data.referralCode || data.referralCode.startsWith("KODA")) {
                 const cleanName = (data.name || currentUser.displayName || "User").replace(/\s+/g, '');
-                const generatedCode = cleanName + "-" + Math.floor(1000 + Math.random() * 9000);
-                await updateDoc(userDocRef, { referralCode: generatedCode });
-                data.referralCode = generatedCode;
+                updates.referralCode = cleanName + "-" + Math.floor(1000 + Math.random() * 9000);
+              }
+              if (!data.createdAt) {
+                updates.createdAt = serverTimestamp();
+              }
+              if (Object.keys(updates).length > 0) {
+                await updateDoc(userDocRef, updates);
+                Object.assign(data, updates);
               }
               setUserData(data);
               setProfileName(data.name || '');
@@ -326,19 +333,53 @@ export default function App() {
     const unsubAllWit = onSnapshot(collection(db, "withdrawals"), (snapshot) => {
       setAllWithdrawals(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-    const unsubAllUsr = onSnapshot(collection(db, "users"), async (snapshot) => {
-      const usersList = [];
-      for (const userDoc of snapshot.docs) {
-        const uData = userDoc.data();
-        if (!uData.referralCode || uData.referralCode.startsWith("KODA")) {
-          const cleanName = (uData.name || "User").replace(/\s+/g, '');
-          const newCode = cleanName + "-" + Math.floor(1000 + Math.random() * 9000);
-          await updateDoc(doc(db, "users", userDoc.id), { referralCode: newCode });
-          uData.referralCode = newCode;
+
+    // 100% BULLETPROOF USER FETCH FOR ADMIN PANEL TO PREVENT ANY BLANK/MISSING USERS
+    const fetchAllUsersOnce = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "users"));
+        const usersList = [];
+        for (const userDoc of querySnapshot.docs) {
+          const uData = userDoc.data();
+          let needsUpdate = false;
+          let updateFields = {};
+          
+          if (!uData.referralCode || uData.referralCode.startsWith("KODA")) {
+            const cleanName = (uData.name || "User").replace(/\s+/g, '');
+            updateFields.referralCode = cleanName + "-" + Math.floor(1000 + Math.random() * 9000);
+            uData.referralCode = updateFields.referralCode;
+            needsUpdate = true;
+          }
+          if (!uData.createdAt) {
+            updateFields.createdAt = serverTimestamp();
+            needsUpdate = true;
+          }
+          if (needsUpdate) {
+            try {
+              await updateDoc(doc(db, "users", userDoc.id), updateFields);
+            } catch (e) {
+              console.error("Auto backfill error:", e);
+            }
+          }
+          usersList.push({ id: userDoc.id, ...uData });
         }
-        usersList.push({ id: userDoc.id, ...uData });
+
+        usersList.sort((a, b) => {
+          const timeA = a.createdAt?.seconds || 0;
+          const timeB = b.createdAt?.seconds || 0;
+          return timeA - timeB;
+        });
+
+        setAllUsers(usersList);
+      } catch (err) {
+        console.error("Error fetching users:", err);
       }
-      setAllUsers(usersList);
+    };
+
+    fetchAllUsersOnce();
+
+    const unsubAllUsr = onSnapshot(collection(db, "users"), (snapshot) => {
+      fetchAllUsersOnce();
     });
 
     return () => {
@@ -383,17 +424,21 @@ export default function App() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setAuthError('');
+    setSubmittingAuth(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
       setShowAuthModal(false);
     } catch (err) {
       setAuthError(getFriendlyErrorMessage(err.code));
+    } finally {
+      setSubmittingAuth(false);
     }
   };
 
   const handleSignup = async (e) => {
     e.preventDefault();
     setAuthError('');
+    setSubmittingAuth(true);
     try {
       const res = await createUserWithEmailAndPassword(auth, email, password);
       
@@ -419,6 +464,8 @@ export default function App() {
       setShowAuthModal(false);
     } catch (err) {
       setAuthError(getFriendlyErrorMessage(err.code));
+    } finally {
+      setSubmittingAuth(false);
     }
   };
 
@@ -766,11 +813,11 @@ export default function App() {
                 </div>
               )}
 
-              {/* Sub-Tab 2: Finance & TrxID Verification */}
+              {/* Sub-Tab 2: Finance & TrxID Verification (Approve Only for Deposits) */}
               {adminSubTab === 'finance' && (
                 <div className="space-y-6">
                   <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-2xl shadow-xl space-y-4">
-                    <h3 className="text-lg font-semibold text-slate-200">Deposit Verification & Audits</h3>
+                    <h3 className="text-lg font-semibold text-slate-200">Deposit Verification & Audits (Approve Only)</h3>
                     <div className="space-y-3">
                       {allDeposits.length === 0 ? <p className="text-xs text-slate-400">No deposit requests.</p> : 
                         allDeposits.map(dep => (
@@ -780,7 +827,7 @@ export default function App() {
                               <p className="text-xs text-slate-400">
                                 TrxID: <span className="text-blue-400 font-mono">{dep.trxId}</span> | 
                                 Sender: <span className="text-emerald-400 font-mono">{dep.senderPhone || 'N/A'}</span> | 
-                                Date: <span className="text-slate-300">{dep.timestamp ? new Date(dep.timestamp.seconds * 1000).toLocaleString() : 'Just now'}</span> | 
+                                Date: <span className="text-cyan-400">{dep.timestamp ? new Date(dep.timestamp.seconds * 1000).toLocaleString() : 'Just now'}</span> | 
                                 Status: <span className="text-amber-400">{dep.status}</span>
                               </p>
                             </div>
@@ -817,7 +864,7 @@ export default function App() {
                               <p className="text-sm font-medium text-slate-200">{wit.email} - ৳{wit.amount} ({wit.method})</p>
                               <p className="text-xs text-slate-400">
                                 Account: <span className="text-emerald-400 font-mono">{wit.account}</span> | 
-                                Date: <span className="text-slate-300">{wit.timestamp ? new Date(wit.timestamp.seconds * 1000).toLocaleString() : 'Just now'}</span> | 
+                                Date: <span className="text-cyan-400">{wit.timestamp ? new Date(wit.timestamp.seconds * 1000).toLocaleString() : 'Just now'}</span> | 
                                 Status: <span className="text-amber-400">{wit.status}</span>
                               </p>
                             </div>
@@ -1235,51 +1282,53 @@ export default function App() {
               </div>
             </div>
           ) : activeTab === 'tasks' ? (
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
-              <h3 className="text-lg font-semibold mb-4 text-slate-200">Available Tasks</h3>
-              <div className="space-y-3">
-                {tasks.map(task => {
-                  const locked = isTaskLocked(task.id);
-                  const remaining = getRemainingTime(task.id);
-                  return (
-                    <div key={task.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-xl border border-slate-800 gap-3">
-                      <div>
-                        <h4 className="font-medium text-slate-200 text-sm md:text-base">{task.title}</h4>
-                        <div className="flex flex-wrap items-center gap-3 mt-1">
-                          <span className="text-xs text-blue-400 font-semibold">Reward: ৳{task.reward}</span>
-                          <span className="text-xs text-amber-400 bg-amber-950/50 px-2 py-0.5 rounded border border-amber-800/50">⏱️ Timer: {task.timerSec} Seconds</span>
-                          <a href={task.link} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 underline hover:text-indigo-300">Visit Link ↗</a>
+            <div className="space-y-6">
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
+                <h3 className="text-lg font-semibold mb-4 text-slate-200">Available Tasks</h3>
+                <div className="space-y-3">
+                  {tasks.map(task => {
+                    const locked = isTaskLocked(task.id);
+                    const remaining = getRemainingTime(task.id);
+                    return (
+                      <div key={task.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-xl border border-slate-800 gap-3">
+                        <div>
+                          <h4 className="font-medium text-slate-200 text-sm md:text-base">{task.title}</h4>
+                          <div className="flex flex-wrap items-center gap-3 mt-1">
+                            <span className="text-xs text-blue-400 font-semibold">Reward: ৳{task.reward}</span>
+                            <span className="text-xs text-amber-400 bg-amber-950/50 px-2 py-0.5 rounded border border-amber-800/50">⏱️ Timer: {task.timerSec} Seconds</span>
+                            <a href={task.link} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 underline hover:text-indigo-300">Visit Link ↗</a>
+                          </div>
                         </div>
+                        {locked ? (
+                          <div className="text-right">
+                            <span className="px-4 py-2 bg-slate-800 text-slate-400 text-xs font-semibold rounded-xl border border-slate-700 block">
+                              Completed ✓
+                            </span>
+                            <span className="text-[10px] text-amber-400 mt-1 block">{remaining}</span>
+                          </div>
+                        ) : (
+                          <button 
+                            onClick={() => {
+                              if (!user) { setShowAuthModal(true); return; }
+                              if (!userData?.package) {
+                                alert("Please activate a membership package first!");
+                                setActiveTab('membership');
+                                return;
+                              }
+                              setSelectedTask(task);
+                              setTimer(task.timerSec || 25);
+                              setTimerActive(true);
+                              setTaskCompletedMsg('');
+                            }}
+                            className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-xs font-semibold rounded-xl text-white shadow-lg whitespace-nowrap"
+                          >
+                            Start Task
+                          </button>
+                        )}
                       </div>
-                      {locked ? (
-                        <div className="text-right">
-                          <span className="px-4 py-2 bg-slate-800 text-slate-400 text-xs font-semibold rounded-xl border border-slate-700 block">
-                            Completed ✓
-                          </span>
-                          <span className="text-[10px] text-amber-400 mt-1 block">{remaining}</span>
-                        </div>
-                      ) : (
-                        <button 
-                          onClick={() => {
-                            if (!user) { setShowAuthModal(true); return; }
-                            if (!userData?.package) {
-                              alert("Please activate a membership package first!");
-                              setActiveTab('membership');
-                              return;
-                            }
-                            setSelectedTask(task);
-                            setTimer(task.timerSec || 25);
-                            setTimerActive(true);
-                            setTaskCompletedMsg('');
-                          }}
-                          className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-xs font-semibold rounded-xl text-white shadow-lg whitespace-nowrap"
-                        >
-                          Start Task
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
           ) : activeTab === 'membership' ? (
@@ -2052,9 +2101,10 @@ export default function App() {
 
               <button 
                 type="submit" 
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-white shadow-lg"
+                disabled={submittingAuth}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-white shadow-lg disabled:opacity-50"
               >
-                {authMode === 'login' ? 'Sign In' : 'Register Account'}
+                {submittingAuth ? 'Processing...' : (authMode === 'login' ? 'Sign In' : 'Register Account')}
               </button>
             </form>
 
@@ -2105,7 +2155,7 @@ function UserAdminRow({ usr, db, serialNo }) {
     }
   };
 
-  const createdAtDate = usr.createdAt?.seconds ? new Date(usr.createdAt.seconds * 1000).toLocaleString() : 'N/A';
+  const createdAtDate = usr.createdAt?.seconds ? new Date(usr.createdAt.seconds * 1000).toLocaleString() : 'Just now';
 
   return (
     <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
@@ -2113,14 +2163,14 @@ function UserAdminRow({ usr, db, serialNo }) {
         <div>
           <p className="text-sm font-bold text-indigo-400">#{serialNo}. {usr.name || 'No Name'} ({usr.email})</p>
           <p className="text-xs text-slate-400">Phone: {usr.phone || 'N/A'} | Ref Code: <span className="text-cyan-400 font-mono">{usr.referralCode || 'N/A'}</span> | Referred By: <span className="text-indigo-400">{usr.referredBy || 'None'}</span></p>
-          <p className="text-xs text-slate-400">Package: <span className="text-amber-400">{usr.package || 'None'}</span> | Created: <span className="text-slate-300">{createdAtDate}</span> | Status: <span className={usr.status === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
+          <p className="text-xs text-slate-400">Package: <span className="text-amber-400">{usr.package || 'None'}</span> | Created: <span className="text-cyan-400">{createdAtDate}</span> | Status: <span className={usr.status === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
         </div>
         {usr.email !== '1roxi1@gmail.com' && (
           <button 
             onClick={handleToggleBan}
             className={`px-3 py-1.5 text-xs font-semibold rounded-lg text-white ${usr.status === 'Banned' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}
           >
-            {usr.status === 'Banned' ? 'Unban User' : 'Ban User'}
+            {usr.status === 'Banned' ? 'Username Unban' : 'Ban User'}
           </button>
         )}
       </div>
@@ -2140,14 +2190,14 @@ function UserAdminRow({ usr, db, serialNo }) {
           <input 
             type="number" 
             value={earnWallet} 
-            onChange={(e)=>setEarnWallet(e.target.value)} 
+            onInput={(e)=>setEarnWallet(e.target.value)} 
             className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
           />
         </div>
         <div className="flex items-end h-full pt-1 sm:pt-4">
           <button 
             onClick={handleUpdateBalance}
-            className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-xs font-bold rounded-lg text-white shadow"
+            className="w-full py-2 bg-indigo-600 hover:py-2 bg-indigo-700 text-xs font-bold rounded-lg text-white shadow hover:bg-indigo-700"
           >
             Update Balances
           </button>
