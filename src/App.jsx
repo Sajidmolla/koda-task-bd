@@ -151,9 +151,10 @@ export default function App() {
   const [allWithdrawals, setAllWithdrawals] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
 
-  // User personal history states
+  // User personal history & completed tasks states
   const [myDeposits, setMyDeposits] = useState([]);
   const [myWithdrawals, setMyWithdrawals] = useState([]);
+  const [completedTasks, setCompletedTasks] = useState({}); // { taskId: timestamp }
 
   const [selectedTask, setSelectedTask] = useState(null);
   const [timer, setTimer] = useState(25);
@@ -193,7 +194,6 @@ export default function App() {
       deposit: "ডিপোজিট",
       withdraw: "উইথড্র",
       history: "হিস্ট্রি",
-      referral: "রেফারেল",
       profile: "প্রোফাইল",
       support: "সাপোর্ট",
       adminPanel: "অ্যাডমিন প্যানেল",
@@ -256,6 +256,7 @@ export default function App() {
               }
               setUserData(data);
               setProfileName(data.name || '');
+              setCompletedTasks(data.completedTasks || {});
             } else {
               const cleanName = (currentUser.displayName || "User").replace(/\s+/g, '');
               const uniqueRefCode = cleanName + "-" + Math.floor(1000 + Math.random() * 9000);
@@ -269,16 +270,20 @@ export default function App() {
                 earningsWallet: 0,
                 referralEarnings: 0,
                 package: null,
-                status: "Active"
+                status: "Active",
+                completedTasks: {}
               };
               await setDoc(userDocRef, initialData);
               setUserData(initialData);
               setProfileName(initialData.name);
+              setCompletedTasks({});
             }
 
             const unsubUser = onSnapshot(userDocRef, (docSnap) => {
               if (docSnap.exists()) {
-                setUserData(docSnap.data());
+                const uData = docSnap.data();
+                setUserData(uData);
+                setCompletedTasks(uData.completedTasks || {});
               }
             });
 
@@ -305,6 +310,7 @@ export default function App() {
           setIsAdmin(false);
           setMyDeposits([]);
           setMyWithdrawals([]);
+          setCompletedTasks({});
           setLoading(false);
         }
       } catch (err) {
@@ -404,7 +410,8 @@ export default function App() {
         earningsWallet: 0,
         referralEarnings: 0,
         package: null,
-        status: "Active"
+        status: "Active",
+        completedTasks: {}
       };
       await setDoc(doc(db, "users", res.user.uid), newUserDoc);
       setUserData(newUserDoc);
@@ -539,6 +546,27 @@ export default function App() {
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     alert("Copied to clipboard: " + text);
+  };
+
+  // Check if task is locked (completed within last 24 hours)
+  const isTaskLocked = (taskId) => {
+    const lastCompleted = completedTasks[taskId];
+    if (!lastCompleted) return false;
+    const now = Date.now();
+    const twentyFourHours = 24 * 60 * 60 * 1000;
+    return (now - lastCompleted) < twentyFourHours;
+  };
+
+  const getRemainingTime = (taskId) => {
+    const lastCompleted = completedTasks[taskId];
+    if (!lastCompleted) return "";
+    const now = Date.now();
+    const twentyFourHours = 24 * 60 * 60 * 1000;
+    const diff = twentyFourHours - (now - lastCompleted);
+    if (diff <= 0) return "";
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    return `Available in ${hours}h ${minutes}m`;
   };
 
   if (loading) {
@@ -1152,7 +1180,59 @@ export default function App() {
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
                 <h3 className="text-lg font-semibold mb-4 text-slate-200">Available Tasks (Timer & Link Enabled)</h3>
                 <div className="space-y-3">
-                  {tasks.map(task => (
+                  {tasks.map(task => {
+                    const locked = isTaskLocked(task.id);
+                    const remaining = getRemainingTime(task.id);
+                    return (
+                      <div key={task.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-xl border border-slate-800 gap-3">
+                        <div>
+                          <h4 className="font-medium text-slate-200 text-sm md:text-base">{task.title}</h4>
+                          <div className="flex flex-wrap items-center gap-3 mt-1">
+                            <span className="text-xs text-blue-400 font-semibold">Reward: ৳{task.reward}</span>
+                            <span className="text-xs text-amber-400 bg-amber-950/50 px-2 py-0.5 rounded border border-amber-800/50">⏱️ Timer: {task.timerSec} Seconds</span>
+                            <a href={task.link} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 underline hover:text-indigo-300">Visit Link ↗</a>
+                          </div>
+                        </div>
+                        {locked ? (
+                          <div className="text-right">
+                            <span className="px-4 py-2 bg-slate-800 text-slate-400 text-xs font-semibold rounded-xl border border-slate-700 block">
+                              Completed ✓
+                            </span>
+                            <span className="text-[10px] text-amber-400 mt-1 block">{remaining}</span>
+                          </div>
+                        ) : (
+                          <button 
+                            onClick={() => {
+                              if (!user) { setShowAuthModal(true); return; }
+                              if (!userData?.package) {
+                                alert("Please activate a membership package first!");
+                                setActiveTab('membership');
+                                return;
+                              }
+                              setSelectedTask(task);
+                              setTimer(task.timerSec || 25);
+                              setTimerActive(true);
+                              setTaskCompletedMsg('');
+                            }}
+                            className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-xs font-semibold rounded-xl text-white shadow-lg whitespace-nowrap"
+                          >
+                            Start Task
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : activeTab === 'tasks' ? (
+            <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
+              <h3 className="text-lg font-semibold mb-4 text-slate-200">Available Tasks</h3>
+              <div className="space-y-3">
+                {tasks.map(task => {
+                  const locked = isTaskLocked(task.id);
+                  const remaining = getRemainingTime(task.id);
+                  return (
                     <div key={task.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-xl border border-slate-800 gap-3">
                       <div>
                         <h4 className="font-medium text-slate-200 text-sm md:text-base">{task.title}</h4>
@@ -1162,61 +1242,35 @@ export default function App() {
                           <a href={task.link} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 underline hover:text-indigo-300">Visit Link ↗</a>
                         </div>
                       </div>
-                      <button 
-                        onClick={() => {
-                          if (!user) { setShowAuthModal(true); return; }
-                          if (!userData?.package) {
-                            alert("Please activate a membership package first!");
-                            setActiveTab('membership');
-                            return;
-                          }
-                          setSelectedTask(task);
-                          setTimer(task.timerSec || 25);
-                          setTimerActive(true);
-                          setTaskCompletedMsg('');
-                        }}
-                        className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-xs font-semibold rounded-xl text-white shadow-lg whitespace-nowrap"
-                      >
-                        Start Task
-                      </button>
+                      {locked ? (
+                        <div className="text-right">
+                          <span className="px-4 py-2 bg-slate-800 text-slate-400 text-xs font-semibold rounded-xl border border-slate-700 block">
+                            Completed ✓
+                          </span>
+                          <span className="text-[10px] text-amber-400 mt-1 block">{remaining}</span>
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={() => {
+                            if (!user) { setShowAuthModal(true); return; }
+                            if (!userData?.package) {
+                              alert("Please activate a membership package first!");
+                              setActiveTab('membership');
+                              return;
+                            }
+                            setSelectedTask(task);
+                            setTimer(task.timerSec || 25);
+                            setTimerActive(true);
+                            setTaskCompletedMsg('');
+                          }}
+                          className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-xs font-semibold rounded-xl text-white shadow-lg whitespace-nowrap"
+                        >
+                          Start Task
+                        </button>
+                      )}
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : activeTab === 'tasks' ? (
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
-              <h3 className="text-lg font-semibold mb-4 text-slate-200">Available Tasks</h3>
-              <div className="space-y-3">
-                {tasks.map(task => (
-                  <div key={task.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-xl border border-slate-800 gap-3">
-                    <div>
-                      <h4 className="font-medium text-slate-200 text-sm md:text-base">{task.title}</h4>
-                      <div className="flex flex-wrap items-center gap-3 mt-1">
-                        <span className="text-xs text-blue-400 font-semibold">Reward: ৳{task.reward}</span>
-                        <span className="text-xs text-amber-400 bg-amber-950/50 px-2 py-0.5 rounded border border-amber-800/50">⏱️ Timer: {task.timerSec} Seconds</span>
-                        <a href={task.link} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 underline hover:text-indigo-300">Visit Link ↗</a>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        if (!user) { setShowAuthModal(true); return; }
-                        if (!userData?.package) {
-                          alert("Please activate a membership package first!");
-                          setActiveTab('membership');
-                          return;
-                        }
-                        setSelectedTask(task);
-                        setTimer(task.timerSec || 25);
-                        setTimerActive(true);
-                        setTaskCompletedMsg('');
-                      }}
-                      className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-xs font-semibold rounded-xl text-white shadow-lg whitespace-nowrap"
-                    >
-                      Start Task
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ) : activeTab === 'membership' ? (
