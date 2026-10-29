@@ -334,35 +334,14 @@ export default function App() {
       setAllWithdrawals(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // 100% BULLETPROOF USER FETCH FOR ADMIN PANEL TO PREVENT ANY BLANK/MISSING USERS
+    // 100% NON-BLOCKING LIGHTWEIGHT FETCH FOR ADMIN USERS LIST
     const fetchAllUsersOnce = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "users"));
         const usersList = [];
-        for (const userDoc of querySnapshot.docs) {
-          const uData = userDoc.data();
-          let needsUpdate = false;
-          let updateFields = {};
-          
-          if (!uData.referralCode || uData.referralCode.startsWith("KODA")) {
-            const cleanName = (uData.name || "User").replace(/\s+/g, '');
-            updateFields.referralCode = cleanName + "-" + Math.floor(1000 + Math.random() * 9000);
-            uData.referralCode = updateFields.referralCode;
-            needsUpdate = true;
-          }
-          if (!uData.createdAt) {
-            updateFields.createdAt = serverTimestamp();
-            needsUpdate = true;
-          }
-          if (needsUpdate) {
-            try {
-              await updateDoc(doc(db, "users", userDoc.id), updateFields);
-            } catch (e) {
-              console.error("Auto backfill error:", e);
-            }
-          }
-          usersList.push({ id: userDoc.id, ...uData });
-        }
+        querySnapshot.forEach((userDoc) => {
+          usersList.push({ id: userDoc.id, ...userDoc.data() });
+        });
 
         usersList.sort((a, b) => {
           const timeA = a.createdAt?.seconds || 0;
@@ -379,7 +358,16 @@ export default function App() {
     fetchAllUsersOnce();
 
     const unsubAllUsr = onSnapshot(collection(db, "users"), (snapshot) => {
-      fetchAllUsersOnce();
+      const usersList = [];
+      snapshot.forEach((userDoc) => {
+        usersList.push({ id: userDoc.id, ...userDoc.data() });
+      });
+      usersList.sort((a, b) => {
+        const timeA = a.createdAt?.seconds || 0;
+        const timeB = b.createdAt?.seconds || 0;
+        return timeA - timeB;
+      });
+      setAllUsers(usersList);
     });
 
     return () => {
@@ -459,7 +447,8 @@ export default function App() {
         completedTasks: {},
         createdAt: serverTimestamp()
       };
-      await setDoc(doc(db, "users", res.user.uid), newUserDoc);
+      // Non-blocking background doc creation
+      setDoc(doc(db, "users", res.user.uid), newUserDoc).catch(err => console.error(err));
       setUserData(newUserDoc);
       setShowAuthModal(false);
     } catch (err) {
@@ -2161,7 +2150,7 @@ function UserAdminRow({ usr, db, serialNo }) {
     <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
         <div>
-          <p className="text-sm font-bold text-indigo-400">#{serialNo}. {usr.name || 'No Name'} ({usr.email})</p>
+          <p className="type-sm font-bold text-indigo-400">#{serialNo}. {usr.name || 'No Name'} ({usr.email})</p>
           <p className="text-xs text-slate-400">Phone: {usr.phone || 'N/A'} | Ref Code: <span className="text-cyan-400 font-mono">{usr.referralCode || 'N/A'}</span> | Referred By: <span className="text-indigo-400">{usr.referredBy || 'None'}</span></p>
           <p className="text-xs text-slate-400">Package: <span className="text-amber-400">{usr.package || 'None'}</span> | Created: <span className="text-cyan-400">{createdAtDate}</span> | Status: <span className={usr.status === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
         </div>
