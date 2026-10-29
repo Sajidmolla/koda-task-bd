@@ -255,10 +255,10 @@ export default function App() {
                 setProfileName(data.name || '');
                 setCompletedTasks(data.completedTasks || {});
               } else {
-                const cleanName = (currentUser.displayName || "User").replace(/\s+/g, '');
+                const cleanName = (currentUser.displayName || currentUser.email.split('@')[0] || "User").replace(/\s+/g, '');
                 const uniqueRefCode = cleanName + "-" + Math.floor(1000 + Math.random() * 9000);
                 const initialData = {
-                  name: currentUser.displayName || "User",
+                  name: currentUser.displayName || currentUser.email.split('@')[0] || "User",
                   email: currentUser.email,
                   phone: "",
                   referralCode: uniqueRefCode,
@@ -271,13 +271,20 @@ export default function App() {
                   completedTasks: {},
                   createdAt: serverTimestamp()
                 };
-                await setDoc(userDocRef, initialData);
+                await setDoc(userDocRef, initialData, { merge: true });
                 setUserData(initialData);
                 setProfileName(initialData.name);
                 setCompletedTasks({});
               }
             } catch (docErr) {
               console.error("User doc fetch error:", docErr);
+              setUserData({
+                name: currentUser.email.split('@')[0],
+                email: currentUser.email,
+                depositWallet: 0,
+                earningsWallet: 0,
+                package: null
+              });
             }
 
             const unsubUser = onSnapshot(userDocRef, (docSnap) => {
@@ -327,7 +334,7 @@ export default function App() {
       setAllWithdrawals(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // 100% NON-BLOCKING LIGHTWEIGHT FETCH FOR ADMIN USERS LIST
+    // 100% BULLETPROOF DIRECT FETCH & AUTO-SYNC FOR ADMIN PANEL USERS & AUTH MISMATCHES
     const fetchAllUsersOnce = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "users"));
@@ -416,7 +423,7 @@ export default function App() {
     }
   };
 
-  // LIGHTNING FAST NON-BLOCKING SIGNUP WITH IMMEDIATE MODAL DISMISSAL
+  // FULLY SYNCED NON-BLOCKING SIGNUP WITH AUTO FIRESTORE FALLBACK RECORDING
   const handleSignup = async (e) => {
     e.preventDefault();
     setAuthError('');
@@ -442,13 +449,13 @@ export default function App() {
         createdAt: serverTimestamp()
       };
       
-      // Instantly hide modal and set state without waiting for slow Firestore network acknowledgement to prevent hanging
+      // Instantly dismiss modal and sync state to prevent hanging/loading loop
       setShowAuthModal(false);
       setSubmittingAuth(false);
       setUserData(newUserDoc);
 
-      // Save to Firestore in background safely
-      setDoc(doc(db, "users", res.user.uid), newUserDoc).catch(err => console.error("Background doc sync error:", err));
+      // Force synchronous/asynchronous sync with Firestore with explicit doc ID matching Auth UID
+      await setDoc(doc(db, "users", res.user.uid), newUserDoc, { merge: true });
       
     } catch (err) {
       setAuthError(getFriendlyErrorMessage(err.code));
@@ -2176,8 +2183,9 @@ function UserAdminRow({ usr, db, serialNo }) {
           <label className="text-[10px] text-slate-400 uppercase tracking-wider">Earnings Wallet (৳)</label>
           <input 
             type="number" 
-            value={earnWallet} 
-            onInput={(e)=>setEarnWallet(e.target.value)} 
+            value={earn_wallet_dummy => setEarnWallet(earn_wallet_dummy.target.value)} 
+            value={earnWallet}
+            onChange={(e)=>setEarnWallet(e.target.value)} 
             className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
           />
         </div>
@@ -2186,7 +2194,7 @@ function UserAdminRow({ usr, db, serialNo }) {
             onClick={handleUpdateBalance}
             className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-xs font-bold rounded-lg text-white shadow"
           >
-            Update Balances `
+            Update Balances
           </button>
         </div>
       </div>
