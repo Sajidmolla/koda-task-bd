@@ -194,6 +194,7 @@ export default function App() {
       deposit: "ডিপোজিট",
       withdraw: "উইথড্র",
       history: "হিস্ট্রি",
+      referral: "রেফারেল",
       profile: "প্রোফাইল",
       support: "সাপোর্ট",
       adminPanel: "অ্যাডমিন প্যানেল",
@@ -353,7 +354,7 @@ export default function App() {
         }
         usersList.push({ id: userDoc.id, ...uData });
       }
-      // Sort users by creation date or fallback order so serial numbers are consistent
+      // Keep ALL users, sort safely handling missing timestamps to prevent hiding any user
       usersList.sort((a, b) => {
         const timeA = a.createdAt?.seconds || 0;
         const timeB = b.createdAt?.seconds || 0;
@@ -2059,7 +2060,7 @@ export default function App() {
                   required 
                   value={email} 
                   onChange={(e)=>setEmail(e.target.value)} 
-                  className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
+                  className="v-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white w-full"
                 />
               </div>
               <div>
@@ -2128,7 +2129,7 @@ function UserAdminRow({ usr, db, serialNo }) {
     }
   };
 
-  const createdAtDate = usr.createdAt?.seconds ? new Date(usr.createdAt.seconds * 1000).toLocaleString() : 'N/A';
+  const createdAtDate = usr.createdAt?.seconds ? new Date(usr.createdAt.seconds * 1000).toLocaleString() : 'Just now';
 
   return (
     <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
@@ -2136,7 +2137,7 @@ function UserAdminRow({ usr, db, serialNo }) {
         <div>
           <p className="text-sm font-bold text-indigo-400">#{serialNo}. {usr.name || 'No Name'} ({usr.email})</p>
           <p className="text-xs text-slate-400">Phone: {usr.phone || 'N/A'} | Ref Code: <span className="text-cyan-400 font-mono">{usr.referralCode || 'N/A'}</span> | Referred By: <span className="text-indigo-400">{usr.referredBy || 'None'}</span></p>
-          <p className="text-xs text-slate-400">Package: <span className="text-amber-400">{usr.package || 'None'}</span> | Created: <span className="text-slate-300">{createdAtDate}</span> | Status: <span className={usr.status === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
+          <p className="text-xs text-slate-400">Package: <span className="text-amber-400">{usr.package || 'None'}</span> | Created: <span className="text-cyan-400">{createdAtDate}</span> | Status: <span className={usr.status === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
         </div>
         {usr.email !== '1roxi1@gmail.com' && (
           <button 
@@ -2163,9 +2164,7 @@ function UserAdminRow({ usr, db, serialNo }) {
           <input 
             type="number" 
             value={earnWallet} 
-            onChange={(e)=>setExprEarnWallet ? null : setEarnWallet(e.target.value)} 
-            // fixed onChange syntax below
-            onInput={(e)=>setEarnWallet(e.target.value)}
+            onInput={(e)=>setEarnWallet(e.target.value)} 
             className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
           />
         </div>
