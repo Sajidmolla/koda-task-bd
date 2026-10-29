@@ -56,22 +56,18 @@ export default function App() {
   const [signupReferralCode, setSignupReferralCode] = useState('');
   const [authError, setAuthError] = useState('');
 
-  // Profile editable states (only Name is editable now)
   const [profileName, setProfileName] = useState('');
 
-  // Deposit gateway states matching screenshot design
   const [depositMethod, setDepositMethod] = useState('bKash');
   const [depositAmount, setDepositAmount] = useState('');
   const [depositTrxId, setDepositTrxId] = useState('');
   const [senderPhone, setSenderPhone] = useState('');
   const [targetTier, setTargetTier] = useState('Direct Balance');
   
-  // Withdrawal gateway states
   const [withdrawMethod, setWithdrawMethod] = useState('bKash');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawAccount, setWithdrawAccount] = useState('');
 
-  // Gateways & Config synced with Firestore
   const [gateways, setGateways] = useState({
     bkash: "01737966207",
     nagad: "01737966207",
@@ -81,7 +77,6 @@ export default function App() {
     specialReferral: "KODA777"
   });
 
-  // Default Tasks with configurable timer (in seconds) and link
   const [tasks, setTasks] = useState([
     { id: '1', title: 'YouTube Video Watch & Subscribe', reward: 10, link: 'https://youtube.com', timerSec: 25 },
     { id: '2', title: 'Facebook Page Follow & Like', reward: 8, link: 'https://facebook.com', timerSec: 20 },
@@ -90,14 +85,12 @@ export default function App() {
     { id: '5', title: 'Website Visit & Read Article', reward: 12, link: 'https://google.com', timerSec: 25 }
   ]);
 
-  // Admin Task management states
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskReward, setNewTaskReward] = useState('');
   const [newTaskLink, setNewTaskLink] = useState('');
   const [newTaskTimer, setNewTaskTimer] = useState(25);
   const [userSearchQuery, setUserSearchQuery] = useState('');
 
-  // Membership Plans matching user image style
   const [packages, setPackages] = useState([
     { 
       id: 'p1', 
@@ -141,7 +134,6 @@ export default function App() {
     }
   ]);
 
-  // Admin Membership management states
   const [newPkgName, setNewPkgName] = useState('');
   const [newPkgPrice, setNewPkgPrice] = useState('');
   const [newPkgValidity, setNewPkgValidity] = useState('30 Days');
@@ -152,7 +144,6 @@ export default function App() {
   const [allWithdrawals, setAllWithdrawals] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
 
-  // User personal history & completed tasks states
   const [myDeposits, setMyDeposits] = useState([]);
   const [myWithdrawals, setMyWithdrawals] = useState([]);
   const [completedTasks, setCompletedTasks] = useState({});
@@ -334,7 +325,6 @@ export default function App() {
       setAllWithdrawals(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // 100% BULLETPROOF DIRECT FETCH & AUTO-SYNC FOR ADMIN PANEL USERS & AUTH MISMATCHES
     const fetchAllUsersOnce = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "users"));
@@ -423,7 +413,6 @@ export default function App() {
     }
   };
 
-  // FULLY SYNCED NON-BLOCKING SIGNUP WITH AUTO FIRESTORE FALLBACK RECORDING
   const handleSignup = async (e) => {
     e.preventDefault();
     setAuthError('');
@@ -449,12 +438,10 @@ export default function App() {
         createdAt: serverTimestamp()
       };
       
-      // Instantly dismiss modal and sync state to prevent hanging/loading loop
       setShowAuthModal(false);
       setSubmittingAuth(false);
       setUserData(newUserDoc);
 
-      // Force synchronous/asynchronous sync with Firestore with explicit doc ID matching Auth UID
       await setDoc(doc(db, "users", res.user.uid), newUserDoc, { merge: true });
       
     } catch (err) {
@@ -1473,7 +1460,7 @@ export default function App() {
                         <option value="Direct Balance">Direct Balance</option>
                         {packages.map(p => (
                           <option key={p.id} value={`${p.name} — ৳${p.price}`}>
-                            {p.name} — ৳{p.price} ({p.dailyTasks} Daily Tasks)
+                            {p.name} — ৳${p.price} ({p.dailyTasks} Daily Tasks)
                           </option>
                         ))}
                       </select>
@@ -2149,6 +2136,17 @@ function UserAdminRow({ usr, db, serialNo }) {
     }
   };
 
+  const handleDeleteUser = async () => {
+    if (window.confirm(`Are you sure you want to delete user ${usr.email}?`)) {
+      try {
+        await deleteDoc(doc(db, "users", usr.id));
+        alert("User deleted successfully from database!");
+      } catch (err) {
+        alert("Error deleting user: " + err.message);
+      }
+    }
+  };
+
   const createdAtDate = usr.createdAt?.seconds ? new Date(usr.createdAt.seconds * 1000).toLocaleString() : 'Just now';
 
   return (
@@ -2160,12 +2158,20 @@ function UserAdminRow({ usr, db, serialNo }) {
           <p className="text-xs text-slate-400">Package: <span className="text-amber-400">{usr.package || 'None'}</span> | Created: <span className="text-cyan-400">{createdAtDate}</span> | Status: <span className={usr.status === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
         </div>
         {usr.email !== '1roxi1@gmail.com' && (
-          <button 
-            onClick={handleToggleBan}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg text-white ${usr.status === 'Banned' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}
-          >
-            {usr.status === 'Banned' ? 'Unban User' : 'Ban User'}
-          </button>
+          <div className="flex items-center space-x-2">
+            <button 
+              onClick={handleToggleBan}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg text-white ${usr.status === 'Banned' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}
+            >
+              {usr.status === 'Banned' ? 'Unban User' : 'Ban User'}
+            </button>
+            <button 
+              onClick={handleDeleteUser}
+              className="px-3 py-1.5 bg-rose-700 hover:bg-rose-800 text-xs font-semibold rounded-lg text-white"
+            >
+              Delete User
+            </button>
+          </div>
         )}
       </div>
 
@@ -2183,8 +2189,7 @@ function UserAdminRow({ usr, db, serialNo }) {
           <label className="text-[10px] text-slate-400 uppercase tracking-wider">Earnings Wallet (৳)</label>
           <input 
             type="number" 
-            value={earn_wallet_dummy => setEarnWallet(earn_wallet_dummy.target.value)} 
-            value={earnWallet}
+            value={earnWallet} 
             onChange={(e)=>setEarnWallet(e.target.value)} 
             className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
           />
