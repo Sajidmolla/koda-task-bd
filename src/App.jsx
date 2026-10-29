@@ -248,11 +248,17 @@ export default function App() {
                 setIsAdmin(false);
                 return;
               }
+              let updates = {};
               if (!data.referralCode || data.referralCode.startsWith("KODA")) {
                 const cleanName = (data.name || currentUser.displayName || "User").replace(/\s+/g, '');
-                const generatedCode = cleanName + "-" + Math.floor(1000 + Math.random() * 9000);
-                await updateDoc(userDocRef, { referralCode: generatedCode });
-                data.referralCode = generatedCode;
+                updates.referralCode = cleanName + "-" + Math.floor(1000 + Math.random() * 9000);
+              }
+              if (!data.createdAt) {
+                updates.createdAt = serverTimestamp();
+              }
+              if (Object.keys(updates).length > 0) {
+                await updateDoc(userDocRef, updates);
+                Object.assign(data, updates);
               }
               setUserData(data);
               setProfileName(data.name || '');
@@ -330,14 +336,29 @@ export default function App() {
       const usersList = [];
       for (const userDoc of snapshot.docs) {
         const uData = userDoc.data();
+        let needsUpdate = false;
+        let updateFields = {};
         if (!uData.referralCode || uData.referralCode.startsWith("KODA")) {
           const cleanName = (uData.name || "User").replace(/\s+/g, '');
-          const newCode = cleanName + "-" + Math.floor(1000 + Math.random() * 9000);
-          await updateDoc(doc(db, "users", userDoc.id), { referralCode: newCode });
-          uData.referralCode = newCode;
+          updateFields.referralCode = cleanName + "-" + Math.floor(1000 + Math.random() * 9000);
+          uData.referralCode = updateFields.referralCode;
+          needsUpdate = true;
+        }
+        if (!uData.createdAt) {
+          updateFields.createdAt = serverTimestamp();
+          needsUpdate = true;
+        }
+        if (needsUpdate) {
+          await updateDoc(doc(db, "users", userDoc.id), updateFields);
         }
         usersList.push({ id: userDoc.id, ...uData });
       }
+      // Sort users by creation date or fallback order so serial numbers are consistent
+      usersList.sort((a, b) => {
+        const timeA = a.createdAt?.seconds || 0;
+        const timeB = b.createdAt?.seconds || 0;
+        return timeA - timeB;
+      });
       setAllUsers(usersList);
     });
 
@@ -766,11 +787,11 @@ export default function App() {
                 </div>
               )}
 
-              {/* Sub-Tab 2: Finance & TrxID Verification */}
+              {/* Sub-Tab 2: Finance & TrxID Verification (Approve Only for Deposits) */}
               {adminSubTab === 'finance' && (
                 <div className="space-y-6">
                   <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-2xl shadow-xl space-y-4">
-                    <h3 className="text-lg font-semibold text-slate-200">Deposit Verification & Audits</h3>
+                    <h3 className="text-lg font-semibold text-slate-200">Deposit Verification & Audits (Approve Only)</h3>
                     <div className="space-y-3">
                       {allDeposits.length === 0 ? <p className="text-xs text-slate-400">No deposit requests.</p> : 
                         allDeposits.map(dep => (
@@ -780,7 +801,7 @@ export default function App() {
                               <p className="text-xs text-slate-400">
                                 TrxID: <span className="text-blue-400 font-mono">{dep.trxId}</span> | 
                                 Sender: <span className="text-emerald-400 font-mono">{dep.senderPhone || 'N/A'}</span> | 
-                                Date: <span className="text-slate-300">{dep.timestamp ? new Date(dep.timestamp.seconds * 1000).toLocaleString() : 'Just now'}</span> | 
+                                Date: <span className="text-cyan-400">{dep.timestamp ? new Date(dep.timestamp.seconds * 1000).toLocaleString() : 'Just now'}</span> | 
                                 Status: <span className="text-amber-400">{dep.status}</span>
                               </p>
                             </div>
@@ -817,7 +838,7 @@ export default function App() {
                               <p className="text-sm font-medium text-slate-200">{wit.email} - ৳{wit.amount} ({wit.method})</p>
                               <p className="text-xs text-slate-400">
                                 Account: <span className="text-emerald-400 font-mono">{wit.account}</span> | 
-                                Date: <span className="text-slate-300">{wit.timestamp ? new Date(wit.timestamp.seconds * 1000).toLocaleString() : 'Just now'}</span> | 
+                                Date: <span className="text-cyan-400">{wit.timestamp ? new Date(wit.timestamp.seconds * 1000).toLocaleString() : 'Just now'}</span> | 
                                 Status: <span className="text-amber-400">{wit.status}</span>
                               </p>
                             </div>
@@ -1235,51 +1256,53 @@ export default function App() {
               </div>
             </div>
           ) : activeTab === 'tasks' ? (
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
-              <h3 className="text-lg font-semibold mb-4 text-slate-200">Available Tasks</h3>
-              <div className="space-y-3">
-                {tasks.map(task => {
-                  const locked = isTaskLocked(task.id);
-                  const remaining = getRemainingTime(task.id);
-                  return (
-                    <div key={task.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-xl border border-slate-800 gap-3">
-                      <div>
-                        <h4 className="font-medium text-slate-200 text-sm md:text-base">{task.title}</h4>
-                        <div className="flex flex-wrap items-center gap-3 mt-1">
-                          <span className="text-xs text-blue-400 font-semibold">Reward: ৳{task.reward}</span>
-                          <span className="text-xs text-amber-400 bg-amber-950/50 px-2 py-0.5 rounded border border-amber-800/50">⏱️ Timer: {task.timerSec} Seconds</span>
-                          <a href={task.link} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 underline hover:text-indigo-300">Visit Link ↗</a>
+            <div className="space-y-6">
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
+                <h3 className="text-lg font-semibold mb-4 text-slate-200">Available Tasks</h3>
+                <div className="space-y-3">
+                  {tasks.map(task => {
+                    const locked = isTaskLocked(task.id);
+                    const remaining = getRemainingTime(task.id);
+                    return (
+                      <div key={task.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-xl border border-slate-800 gap-3">
+                        <div>
+                          <h4 className="font-medium text-slate-200 text-sm md:text-base">{task.title}</h4>
+                          <div className="flex flex-wrap items-center gap-3 mt-1">
+                            <span className="text-xs text-blue-400 font-semibold">Reward: ৳{task.reward}</span>
+                            <span className="text-xs text-amber-400 bg-amber-950/50 px-2 py-0.5 rounded border border-amber-800/50">⏱️ Timer: {task.timerSec} Seconds</span>
+                            <a href={task.link} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 underline hover:text-indigo-300">Visit Link ↗</a>
+                          </div>
                         </div>
+                        {locked ? (
+                          <div className="text-right">
+                            <span className="px-4 py-2 bg-slate-800 text-slate-400 text-xs font-semibold rounded-xl border border-slate-700 block">
+                              Completed ✓
+                            </span>
+                            <span className="text-[10px] text-amber-400 mt-1 block">{remaining}</span>
+                          </div>
+                        ) : (
+                          <button 
+                            onClick={() => {
+                              if (!user) { setShowAuthModal(true); return; }
+                              if (!userData?.package) {
+                                alert("Please activate a membership package first!");
+                                setActiveTab('membership');
+                                return;
+                              }
+                              setSelectedTask(task);
+                              setTimer(task.timerSec || 25);
+                              setTimerActive(true);
+                              setTaskCompletedMsg('');
+                            }}
+                            className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-xs font-semibold rounded-xl text-white shadow-lg whitespace-nowrap"
+                          >
+                            Start Task
+                          </button>
+                        )}
                       </div>
-                      {locked ? (
-                        <div className="text-right">
-                          <span className="px-4 py-2 bg-slate-800 text-slate-400 text-xs font-semibold rounded-xl border border-slate-700 block">
-                            Completed ✓
-                          </span>
-                          <span className="text-[10px] text-amber-400 mt-1 block">{remaining}</span>
-                        </div>
-                      ) : (
-                        <button 
-                          onClick={() => {
-                            if (!user) { setShowAuthModal(true); return; }
-                            if (!userData?.package) {
-                              alert("Please activate a membership package first!");
-                              setActiveTab('membership');
-                              return;
-                            }
-                            setSelectedTask(task);
-                            setTimer(task.timerSec || 25);
-                            setTimerActive(true);
-                            setTaskCompletedMsg('');
-                          }}
-                          className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-xs font-semibold rounded-xl text-white shadow-lg whitespace-nowrap"
-                        >
-                          Start Task
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
           ) : activeTab === 'membership' ? (
@@ -2140,7 +2163,9 @@ function UserAdminRow({ usr, db, serialNo }) {
           <input 
             type="number" 
             value={earnWallet} 
-            onChange={(e)=>setEarnWallet(e.target.value)} 
+            onChange={(e)=>setExprEarnWallet ? null : setEarnWallet(e.target.value)} 
+            // fixed onChange syntax below
+            onInput={(e)=>setEarnWallet(e.target.value)}
             className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
           />
         </div>
