@@ -237,54 +237,48 @@ export default function App() {
             setIsAdmin(false);
             
             const userDocRef = doc(db, "users", currentUser.uid);
-            const userDocSnap = await getDoc(userDocRef);
-
-            if (userDocSnap.exists()) {
-              const data = userDocSnap.data();
-              if (data.status === 'Banned') {
-                alert("Your account has been banned by admin.");
-                signOut(auth);
-                setUser(null);
-                setUserData(null);
-                setIsAdmin(false);
-                return;
+            
+            // Fast non-blocking fallback check
+            try {
+              const userDocSnap = await getDoc(userDocRef);
+              if (userDocSnap.exists()) {
+                const data = userDocSnap.data();
+                if (data.status === 'Banned') {
+                  alert("Your account has been banned by admin.");
+                  signOut(auth);
+                  setUser(null);
+                  setUserData(null);
+                  setIsAdmin(false);
+                  setLoading(false);
+                  return;
+                }
+                setUserData(data);
+                setProfileName(data.name || '');
+                setCompletedTasks(data.completedTasks || {});
+              } else {
+                const cleanName = (currentUser.displayName || "User").replace(/\s+/g, '');
+                const uniqueRefCode = cleanName + "-" + Math.floor(1000 + Math.random() * 9000);
+                const initialData = {
+                  name: currentUser.displayName || "User",
+                  email: currentUser.email,
+                  phone: "",
+                  referralCode: uniqueRefCode,
+                  referredBy: "",
+                  depositWallet: 0,
+                  earningsWallet: 0,
+                  referralEarnings: 0,
+                  package: null,
+                  status: "Active",
+                  completedTasks: {},
+                  createdAt: serverTimestamp()
+                };
+                await setDoc(userDocRef, initialData);
+                setUserData(initialData);
+                setProfileName(initialData.name);
+                setCompletedTasks({});
               }
-              let updates = {};
-              if (!data.referralCode || data.referralCode.startsWith("KODA")) {
-                const cleanName = (data.name || currentUser.displayName || "User").replace(/\s+/g, '');
-                updates.referralCode = cleanName + "-" + Math.floor(1000 + Math.random() * 9000);
-              }
-              if (!data.createdAt) {
-                updates.createdAt = serverTimestamp();
-              }
-              if (Object.keys(updates).length > 0) {
-                await updateDoc(userDocRef, updates);
-                Object.assign(data, updates);
-              }
-              setUserData(data);
-              setProfileName(data.name || '');
-              setCompletedTasks(data.completedTasks || {});
-            } else {
-              const cleanName = (currentUser.displayName || "User").replace(/\s+/g, '');
-              const uniqueRefCode = cleanName + "-" + Math.floor(1000 + Math.random() * 9000);
-              const initialData = {
-                name: currentUser.displayName || "User",
-                email: currentUser.email,
-                phone: "",
-                referralCode: uniqueRefCode,
-                referredBy: "",
-                depositWallet: 0,
-                earningsWallet: 0,
-                referralEarnings: 0,
-                package: null,
-                status: "Active",
-                completedTasks: {},
-                createdAt: serverTimestamp()
-              };
-              await setDoc(userDocRef, initialData);
-              setUserData(initialData);
-              setProfileName(initialData.name);
-              setCompletedTasks({});
+            } catch (docErr) {
+              console.error("User doc fetch error:", docErr);
             }
 
             const unsubUser = onSnapshot(userDocRef, (docSnap) => {
@@ -322,7 +316,7 @@ export default function App() {
           setLoading(false);
         }
       } catch (err) {
-        console.error("Firebase Error:", err);
+        console.error("Firebase Auth Error:", err);
         setLoading(false);
       }
     });
@@ -334,7 +328,7 @@ export default function App() {
       setAllWithdrawals(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // 100% NON-BLOCKING LIGHTWEIGHT FETCH FOR ADMIN USERS LIST
+    // 100% BULLETPROOF DIRECT FETCH FOR ADMIN PANEL USERS (NO STUCK LOADING)
     const fetchAllUsersOnce = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "users"));
@@ -447,8 +441,8 @@ export default function App() {
         completedTasks: {},
         createdAt: serverTimestamp()
       };
-      // Non-blocking background doc creation
-      setDoc(doc(db, "users", res.user.uid), newUserDoc).catch(err => console.error(err));
+      
+      await setDoc(doc(db, "users", res.user.uid), newUserDoc);
       setUserData(newUserDoc);
       setShowAuthModal(false);
     } catch (err) {
@@ -2150,16 +2144,16 @@ function UserAdminRow({ usr, db, serialNo }) {
     <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
         <div>
-          <p className="type-sm font-bold text-indigo-400">#{serialNo}. {usr.name || 'No Name'} ({usr.email})</p>
+          <p className="text-sm font-bold text-indigo-400">#{serialNo}. {usr.name || 'No Name'} ({usr.email})</p>
           <p className="text-xs text-slate-400">Phone: {usr.phone || 'N/A'} | Ref Code: <span className="text-cyan-400 font-mono">{usr.referralCode || 'N/A'}</span> | Referred By: <span className="text-indigo-400">{usr.referredBy || 'None'}</span></p>
-          <p className="text-xs text-slate-400">Package: <span className="text-amber-400">{usr.package || 'None'}</span> | Created: <span className="text-cyan-400">{createdAtDate}</span> | Status: <span className={usr.status === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
+          <p className="text-xs text-slate-400">Package: <span className="text-amber-400">{usr.package || 'None'}</span> | Created: <span className="text-cyan-400">{createdAtDate}</span> | Status: <span className={usr.user_status === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
         </div>
         {usr.email !== '1roxi1@gmail.com' && (
           <button 
             onClick={handleToggleBan}
             className={`px-3 py-1.5 text-xs font-semibold rounded-lg text-white ${usr.status === 'Banned' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}
           >
-            {usr.status === 'Banned' ? 'Username Unban' : 'Ban User'}
+            {usr.status === 'Banned' ? 'Unban User' : 'Ban User'}
           </button>
         )}
       </div>
@@ -2186,7 +2180,7 @@ function UserAdminRow({ usr, db, serialNo }) {
         <div className="flex items-end h-full pt-1 sm:pt-4">
           <button 
             onClick={handleUpdateBalance}
-            className="w-full py-2 bg-indigo-600 hover:py-2 bg-indigo-700 text-xs font-bold rounded-lg text-white shadow hover:bg-indigo-700"
+            className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-xs font-bold rounded-lg text-white shadow"
           >
             Update Balances
           </button>
