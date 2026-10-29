@@ -333,7 +333,7 @@ export default function App() {
       setAllWithdrawals(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // 100% BULLETPROOF USER LIST LISTENER (NO EXCLUSIONS, NO CRASHING, HANDLES ALL OLD/NEW USERS GRACEFULLY)
+    // 100% SAFE & UNFILTERED USER SNAPSHOT (NO USERS WILL EVER BE HIDDEN)
     const unsubAllUsr = onSnapshot(collection(db, "users"), async (snapshot) => {
       const usersList = [];
       for (const userDoc of snapshot.docs) {
@@ -361,7 +361,7 @@ export default function App() {
         usersList.push({ id: userDoc.id, ...uData });
       }
 
-      // Safe sorting: Oldest first, fallback gracefully for any legacy docs without timestamps
+      // Sort by creation time safely without dropping any legacy records
       usersList.sort((a, b) => {
         const timeA = a.createdAt?.seconds || 0;
         const timeB = b.createdAt?.seconds || 0;
@@ -2046,145 +2046,4 @@ export default function App() {
                       required 
                       value={phone} 
                       onChange={(e)=>setPhone(e.target.value)} 
-                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-400">Referral Code (Optional - Leave blank if none)</label>
-                    <input 
-                      type="text" 
-                      placeholder={`e.g. ${adminSpecRefPlaceholder}`}
-                      value={signupReferralCode} 
-                      onChange={(e)=>setSignupReferralCode(e.target.value)} 
-                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-cyan-400 font-mono"
-                    />
-                  </div>
-                </>
-              )}
-              <div>
-                <label className="text-xs text-slate-400">Email Address (Unchangeable after signup)</label>
-                <input 
-                  type="email" 
-                  required 
-                  value={email} 
-                  onChange={(e)=>setEmail(e.target.value)} 
-                  className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-slate-400">Password</label>
-                <input 
-                  type="password" 
-                  required 
-                  value={password} 
-                  onChange={(e)=>setPassword(e.target.value)} 
-                  className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
-                />
-              </div>
-
-              <button 
-                type="submit" 
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-white shadow-lg"
-              >
-                {authMode === 'login' ? 'Sign In' : 'Register Account'}
-              </button>
-            </form>
-
-            <div className="text-center text-xs text-slate-400">
-              {authMode === 'login' ? (
-                <p>Don't have an account? <button onClick={()=>setAuthMode('signup')} className="text-blue-400 underline">Sign Up</button></p>
-              ) : (
-                <p>Already have an account? <button onClick={()=>setAuthMode('login')} className="text-blue-400 underline">Sign In</button></p>
-              )}
-            </div>
-
-            <button 
-              onClick={() => setShowAuthModal(false)}
-              className="w-full text-center text-xs text-slate-500 hover:text-slate-300 mt-2"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function UserAdminRow({ usr, db, serialNo }) {
-  const [depWallet, setDepWallet] = useState(usr.depositWallet || 0);
-  const [earnWallet, setEarnWallet] = useState(usr.earningsWallet || 0);
-
-  const handleUpdateBalance = async () => {
-    try {
-      await updateDoc(doc(db, "users", usr.id), {
-        depositWallet: Number(depWallet),
-        earningsWallet: Number(earnWallet)
-      });
-      alert(`Wallet updated for ${usr.email}`);
-    } catch (err) {
-      alert("Error: " + err.message);
-    }
-  };
-
-  const handleToggleBan = async () => {
-    const newStatus = usr.status === 'Banned' ? 'Active' : 'Banned';
-    try {
-      await updateDoc(doc(db, "users", usr.id), { status: newStatus });
-      alert(`User status changed to ${newStatus}`);
-    } catch (err) {
-      alert("Error: " + err.message);
-    }
-  };
-
-  const createdAtDate = usr.createdAt?.seconds ? new Date(usr.createdAt.seconds * 1000).toLocaleString() : 'Just now';
-
-  return (
-    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-        <div>
-          <p className="text-sm font-bold text-indigo-400">#{serialNo}. {usr.name || 'No Name'} ({usr.email})</p>
-          <p className="text-xs text-slate-400">Phone: {usr.phone || 'N/A'} | Ref Code: <span className="text-cyan-400 font-mono">{usr.referralCode || 'N/A'}</span> | Referred By: <span className="text-indigo-400">{usr.referredBy || 'None'}</span></p>
-          <p className="text-xs text-slate-400">Package: <span className="text-amber-400">{usr.package || 'None'}</span> | Created: <span className="text-cyan-400">{createdAtDate}</span> | Status: <span className={usr.status === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
-        </div>
-        {usr.email !== '1roxi1@gmail.com' && (
-          <button 
-            onClick={handleToggleBan}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg text-white ${usr.status === 'Banned' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}
-          >
-            {usr.status === 'Banned' ? 'Unban User' : 'Ban User'}
-          </button>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center pt-3 border-t border-slate-800">
-        <div>
-          <label className="text-[10px] text-slate-400 uppercase tracking-wider">Deposit Wallet (৳)</label>
-          <input 
-            type="number" 
-            value={depWallet} 
-            onChange={(e)=>setDepWallet(e.target.value)} 
-            className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
-          />
-        </div>
-        <div>
-          <label className="text-[10px] text-slate-400 uppercase tracking-wider">Earnings Wallet (৳)</label>
-          <input 
-            type="number" 
-            value={earnWallet} 
-            onInput={(e)=>setEarnWallet(e.target.value)} 
-            className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
-          />
-        </div>
-        <div className="flex items-end h-full pt-1 sm:pt-4">
-          <button 
-            onClick={handleUpdateBalance}
-            className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-xs font-bold rounded-lg text-white shadow"
-          >
-            Update Balances
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg
