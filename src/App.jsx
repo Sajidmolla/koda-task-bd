@@ -49,6 +49,9 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [submittingAuth, setSubmittingAuth] = useState(false);
 
+  // Admin user folder view state ('all' | 'new' | 'old')
+  const [adminUserFilter, setAdminUserFilter] = useState('all');
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -424,9 +427,9 @@ export default function App() {
       const uniqueRefCode = (cleanName || "User") + "-" + Math.floor(1000 + Math.random() * 9000);
       
       const newUserDoc = {
-        name: fullName,
+        name: fullName || email.split('@')[0],
         email: email,
-        phone: phone,
+        phone: phone || "",
         referralCode: uniqueRefCode,
         referredBy: signupReferralCode.trim() || "",
         depositWallet: 0,
@@ -437,15 +440,14 @@ export default function App() {
         completedTasks: {},
         createdAt: serverTimestamp()
       };
-      
-      setShowAuthModal(false);
-      setSubmittingAuth(false);
-      setUserData(newUserDoc);
 
       await setDoc(doc(db, "users", res.user.uid), newUserDoc, { merge: true });
       
+      setUserData(newUserDoc);
+      setShowAuthModal(false);
     } catch (err) {
       setAuthError(getFriendlyErrorMessage(err.code));
+    } finally {
       setSubmittingAuth(false);
     }
   };
@@ -618,12 +620,33 @@ export default function App() {
     { id: 'history', label: t[lang].history },
   ];
 
-  const filteredUsers = allUsers.filter(u => 
-    u.name?.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-    u.email?.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-    u.phone?.includes(userSearchQuery) ||
-    u.referralCode?.toLowerCase().includes(userSearchQuery.toLowerCase())
-  );
+  // Helper to distinguish New Users vs Old Users (e.g. Created within the last 48 hours or based on array index/timestamp)
+  const nowTime = Date.now();
+  const twoDaysMs = 48 * 60 * 60 * 1000;
+
+  const filteredUsers = allUsers.filter(u => {
+    const matchesSearch = 
+      u.name?.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+      u.email?.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+      u.phone?.includes(userSearchQuery) ||
+      u.referralCode?.toLowerCase().includes(userSearchQuery.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    const createdAtMs = u.createdAt?.seconds ? u.createdAt.seconds * 1000 : nowTime;
+    const isNew = (nowTime - createdAtMs) <= twoDaysMs;
+
+    if (adminUserFilter === 'new') return isNew;
+    if (adminUserFilter === 'old') return !isNew;
+    return true; // 'all'
+  });
+
+  const newUsersCount = allUsers.filter(u => {
+    const createdAtMs = u.createdAt?.seconds ? u.createdAt.seconds * 1000 : nowTime;
+    return (nowTime - createdAtMs) <= twoDaysMs;
+  }).length;
+
+  const oldUsersCount = allUsers.length - newUsersCount;
 
   const pendingDepositsCount = allDeposits.filter(d => d.status === 'Pending Verification' || d.status === 'Pending').length;
   const pendingWithdrawalsCount = allWithdrawals.filter(w => w.status === 'Pending').length;
@@ -1075,13 +1098,13 @@ export default function App() {
                 </div>
               )}
 
-              {/* Sub-Tab 5: User Control with Serial Number and Creation Date */}
+              {/* Sub-Tab 5: User Control with New / Old Folders */}
               {adminSubTab === 'users' && (
                 <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-2xl shadow-xl space-y-6">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                      <h3 className="text-lg font-semibold text-slate-200">Registered Users ({filteredUsers.length})</h3>
-                      <p className="text-xs text-slate-400 mt-0.5">Adjust wallet balances, inspect packages, or toggle account suspension.</p>
+                      <h3 className="text-lg font-semibold text-slate-200">Registered Users Management</h3>
+                      <p className="text-xs text-slate-400 mt-0.5">Filter between newly registered accounts and old accounts.</p>
                     </div>
                     <div className="w-full sm:w-72">
                       <input 
@@ -1094,8 +1117,32 @@ export default function App() {
                     </div>
                   </div>
 
+                  {/* Folder Switcher Tabs */}
+                  <div className="flex items-center space-x-2 border-b border-slate-800 pb-4">
+                    <button
+                      onClick={() => setAdminUserFilter('all')}
+                      className={`px-4 py-2 text-xs font-semibold rounded-xl transition ${adminUserFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-slate-950 text-slate-400 hover:text-white'}`}
+                    >
+                      📁 All Users ({allUsers.length})
+                    </button>
+                    <button
+                      onClick={() => setAdminUserFilter('new')}
+                      className={`px-4 py-2 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 ${adminUserFilter === 'new' ? 'bg-emerald-600 text-white' : 'bg-slate-950 text-slate-400 hover:text-white'}`}
+                    >
+                      <span>📂 New Users Folder</span>
+                      <span className="bg-emerald-950 px-1.5 py-0.5 rounded-full text-[10px] text-emerald-300 font-bold">{newUsersCount}</span>
+                    </button>
+                    <button
+                      onClick={() => setAdminUserFilter('old')}
+                      className={`px-4 py-2 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 ${adminUserFilter === 'old' ? 'bg-amber-600 text-white' : 'bg-slate-950 text-slate-400 hover:text-white'}`}
+                    >
+                      <span>🗂️ Old Users Folder</span>
+                      <span className="bg-amber-950 px-1.5 py-0.5 rounded-full text-[10px] text-amber-300 font-bold">{oldUsersCount}</span>
+                    </button>
+                  </div>
+
                   <div className="space-y-4 pt-2">
-                    {filteredUsers.length === 0 ? <p className="text-xs text-slate-500 text-center py-6">No users found.</p> : 
+                    {filteredUsers.length === 0 ? <p className="text-xs text-slate-500 text-center py-6">No users found in this folder.</p> : 
                       filteredUsers.map((usr, index) => (
                         <UserAdminRow key={usr.id} usr={usr} db={db} serialNo={index + 1} />
                       ))
@@ -2155,7 +2202,7 @@ function UserAdminRow({ usr, db, serialNo }) {
         <div>
           <p className="text-sm font-bold text-indigo-400">#{serialNo}. {usr.name || 'No Name'} ({usr.email})</p>
           <p className="text-xs text-slate-400">Phone: {usr.phone || 'N/A'} | Ref Code: <span className="text-cyan-400 font-mono">{usr.referralCode || 'N/A'}</span> | Referred By: <span className="text-indigo-400">{usr.referredBy || 'None'}</span></p>
-          <p className="text-xs text-slate-400">Package: <span className="text-amber-400">{usr.package || 'None'}</span> | Created: <span className="text-cyan-400">{createdAtDate}</span> | Status: <span className={usr.status === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
+          <p className="text-xs text-slate-400">Package: <span className="text-amber-400">{usr.package || 'None'}</span> | Created: <span className="text-cyan-400">{createdAtDate}</span> | Status: <span className={usr.title === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
         </div>
         {usr.email !== '1roxi1@gmail.com' && (
           <div className="flex items-center space-x-2">
