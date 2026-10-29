@@ -194,7 +194,6 @@ export default function App() {
       deposit: "ডিপোজিট",
       withdraw: "উইথড্র",
       history: "হিস্ট্রি",
-      referral: "রেফারেল",
       profile: "প্রোফাইল",
       support: "সাপোর্ট",
       adminPanel: "অ্যাডমিন প্যানেল",
@@ -333,12 +332,15 @@ export default function App() {
     const unsubAllWit = onSnapshot(collection(db, "withdrawals"), (snapshot) => {
       setAllWithdrawals(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
     });
+
+    // ABSOLUTE UNFILTERED USER LIST LISTENER WITH LAZY BACKFILL TO GUARANTEE 100% VISIBILITY OF ALL 49+ USERS
     const unsubAllUsr = onSnapshot(collection(db, "users"), async (snapshot) => {
       const usersList = [];
       for (const userDoc of snapshot.docs) {
         const uData = userDoc.data();
         let needsUpdate = false;
         let updateFields = {};
+        
         if (!uData.referralCode || uData.referralCode.startsWith("KODA")) {
           const cleanName = (uData.name || "User").replace(/\s+/g, '');
           updateFields.referralCode = cleanName + "-" + Math.floor(1000 + Math.random() * 9000);
@@ -350,16 +352,22 @@ export default function App() {
           needsUpdate = true;
         }
         if (needsUpdate) {
-          await updateDoc(doc(db, "users", userDoc.id), updateFields);
+          try {
+            await updateDoc(doc(db, "users", userDoc.id), updateFields);
+          } catch (e) {
+            console.error("Auto backfill error:", e);
+          }
         }
         usersList.push({ id: userDoc.id, ...uData });
       }
-      // Keep ALL users, sort safely handling missing timestamps to prevent hiding any user
+
+      // Safe sorting that puts oldest first, and handles legacy users safely without filtering them out
       usersList.sort((a, b) => {
         const timeA = a.createdAt?.seconds || 0;
         const timeB = b.createdAt?.seconds || 0;
         return timeA - timeB;
       });
+
       setAllUsers(usersList);
     });
 
@@ -2060,7 +2068,7 @@ export default function App() {
                   required 
                   value={email} 
                   onChange={(e)=>setEmail(e.target.value)} 
-                  className="v-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white w-full"
+                  className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
                 />
               </div>
               <div>
