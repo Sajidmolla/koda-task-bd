@@ -238,7 +238,6 @@ export default function App() {
             
             const userDocRef = doc(db, "users", currentUser.uid);
             
-            // Fast non-blocking fallback check
             try {
               const userDocSnap = await getDoc(userDocRef);
               if (userDocSnap.exists()) {
@@ -328,7 +327,7 @@ export default function App() {
       setAllWithdrawals(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // 100% BULLETPROOF DIRECT FETCH FOR ADMIN PANEL USERS (NO STUCK LOADING)
+    // 100% NON-BLOCKING LIGHTWEIGHT FETCH FOR ADMIN USERS LIST
     const fetchAllUsersOnce = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "users"));
@@ -417,6 +416,7 @@ export default function App() {
     }
   };
 
+  // LIGHTNING FAST NON-BLOCKING SIGNUP WITH IMMEDIATE MODAL DISMISSAL
   const handleSignup = async (e) => {
     e.preventDefault();
     setAuthError('');
@@ -442,12 +442,16 @@ export default function App() {
         createdAt: serverTimestamp()
       };
       
-      await setDoc(doc(db, "users", res.user.uid), newUserDoc);
-      setUserData(newUserDoc);
+      // Instantly hide modal and set state without waiting for slow Firestore network acknowledgement to prevent hanging
       setShowAuthModal(false);
+      setSubmittingAuth(false);
+      setUserData(newUserDoc);
+
+      // Save to Firestore in background safely
+      setDoc(doc(db, "users", res.user.uid), newUserDoc).catch(err => console.error("Background doc sync error:", err));
+      
     } catch (err) {
       setAuthError(getFriendlyErrorMessage(err.code));
-    } finally {
       setSubmittingAuth(false);
     }
   };
@@ -2095,7 +2099,7 @@ export default function App() {
               {authMode === 'login' ? (
                 <p>Don't have an account? <button onClick={()=>setAuthMode('signup')} className="text-blue-400 underline">Sign Up</button></p>
               ) : (
-                <p>Already have an account? <button onClick={()=>setAuthMode('login')} className="text-blue-400 underline">Sign In</button></p>
+                <p>Already have an account? <button onClick={()=>setAuthNode('login')} className="text-blue-400 underline">Sign In</button></p>
               )}
             </div>
 
@@ -2146,7 +2150,7 @@ function UserAdminRow({ usr, db, serialNo }) {
         <div>
           <p className="text-sm font-bold text-indigo-400">#{serialNo}. {usr.name || 'No Name'} ({usr.email})</p>
           <p className="text-xs text-slate-400">Phone: {usr.phone || 'N/A'} | Ref Code: <span className="text-cyan-400 font-mono">{usr.referralCode || 'N/A'}</span> | Referred By: <span className="text-indigo-400">{usr.referredBy || 'None'}</span></p>
-          <p className="text-xs text-slate-400">Package: <span className="text-amber-400">{usr.package || 'None'}</span> | Created: <span className="text-cyan-400">{createdAtDate}</span> | Status: <span className={usr.user_status === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
+          <p className="text-xs text-slate-400">Package: <span className="text-amber-400">{usr.package || 'None'}</span> | Created: <span className="text-cyan-400">{createdAtDate}</span> | Status: <span className={usr.status === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
         </div>
         {usr.email !== '1roxi1@gmail.com' && (
           <button 
@@ -2182,7 +2186,7 @@ function UserAdminRow({ usr, db, serialNo }) {
             onClick={handleUpdateBalance}
             className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-xs font-bold rounded-lg text-white shadow"
           >
-            Update Balances
+            Update Balances `
           </button>
         </div>
       </div>
