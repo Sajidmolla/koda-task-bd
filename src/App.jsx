@@ -335,10 +335,8 @@ export default function App() {
         const usersList = [];
         querySnapshot.forEach((userDoc) => {
           const uData = userDoc.data();
-          // Backward compatibility: if isOldUser is undefined, existing pre-existing users are classified as old (true)
-          // while newly created accounts will explicitly have isOldUser: false
           if (uData.isOldUser === undefined && uData.email !== '1roxi1@gmail.com') {
-            uData.isOldUser = true;
+            uData.isOldUser = true; // All existing pre-v40 accounts are considered old
           }
           usersList.push({ id: userDoc.id, ...uData });
         });
@@ -449,7 +447,7 @@ export default function App() {
         package: null,
         status: "Active",
         completedTasks: {},
-        isOldUser: false, // Explicitly a new user created now
+        isOldUser: false, // Brand new user created right now!
         createdAt: serverTimestamp()
       };
 
@@ -632,8 +630,15 @@ export default function App() {
     { id: 'history', label: t[lang].history },
   ];
 
-  // Strict separation: New Users have isOldUser === false, Old Users have isOldUser === true
-  const filteredUsers = allUsers.filter(u => {
+  // Strictly split new users vs old users based on explicit database flag `isOldUser`
+  // Old users: isOldUser === true
+  // New users: isOldUser === false (created from now on)
+  const regularUsersList = allUsers.filter(u => u.email !== '1roxi1@gmail.com');
+
+  const newUsersArray = regularUsersList.filter(u => u.isOldUser === false);
+  const oldUsersArray = regularUsersList.filter(u => u.isOldUser === true);
+
+  const filteredUsers = regularUsersList.filter(u => {
     const matchesSearch = 
       u.name?.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
       u.email?.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
@@ -647,15 +652,15 @@ export default function App() {
     return true; // 'all'
   });
 
-  const newUsersCount = allUsers.filter(u => u.isOldUser === false).length;
-  const oldUsersCount = allUsers.filter(u => u.isOldUser === true).length;
+  const newUsersCount = newUsersArray.length;
+  const oldUsersCount = oldUsersArray.length;
 
   const pendingDepositsCount = allDeposits.filter(d => d.status === 'Pending Verification' || d.status === 'Pending').length;
   const pendingWithdrawalsCount = allWithdrawals.filter(w => w.status === 'Pending').length;
   const totalPendingFinance = pendingDepositsCount + pendingWithdrawalsCount;
 
   const myReferralCodeDisplay = userData?.referralCode || (userData?.name ? userData.name.replace(/\s+/g, '') + "-1234" : "N/A");
-  const myReferralCount = allUsers.filter(u => u.referredBy?.toLowerCase() === myReferralCodeDisplay.toLowerCase()).length;
+  const myReferralCount = regularUsersList.filter(u => u.referredBy?.toLowerCase() === myReferralCodeDisplay.toLowerCase()).length;
   const adminSpecRefPlaceholder = gateways.specialReferral || "KODA777";
 
   return (
@@ -801,8 +806,8 @@ export default function App() {
               {adminSubTab === 'overview' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl">
-                    <p className="text-xs text-slate-400">Total Registered Users</p>
-                    <h3 className="text-3xl font-extrabold text-blue-400 mt-2">{allUsers.length}</h3>
+                    <p className="text-xs text-slate-400">New Registered Users (Total)</p>
+                    <h3 className="text-3xl font-extrabold text-emerald-400 mt-2">{newUsersCount}</h3>
                   </div>
                   <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl">
                     <p className="text-xs text-slate-400">Pending Deposit Requests</p>
@@ -1106,7 +1111,7 @@ export default function App() {
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                       <h3 className="text-lg font-semibold text-slate-200">Registered Users Management</h3>
-                      <p className="text-xs text-slate-400 mt-0.5">Filter between newly registered accounts and old accounts.</p>
+                      <p className="text-xs text-slate-400 mt-0.5">New Users count reflects brand new signups. Old users remain in their folder.</p>
                     </div>
                     <div className="w-full sm:w-72">
                       <input 
@@ -1125,21 +1130,19 @@ export default function App() {
                       onClick={() => setAdminUserFilter('all')}
                       className={`px-4 py-2 text-xs font-semibold rounded-xl transition ${adminUserFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-slate-950 text-slate-400 hover:text-white'}`}
                     >
-                      📁 All Users ({allUsers.length})
+                      📁 All Users ({regularUsersList.length})
                     </button>
                     <button
                       onClick={() => setAdminUserFilter('new')}
                       className={`px-4 py-2 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 ${adminUserFilter === 'new' ? 'bg-emerald-600 text-white' : 'bg-slate-950 text-slate-400 hover:text-white'}`}
                     >
-                      <span>📂 New Users Folder</span>
-                      <span className="bg-emerald-950 px-1.5 py-0.5 rounded-full text-[10px] text-emerald-300 font-bold">{newUsersCount}</span>
+                      <span>📂 New Users ({newUsersCount})</span>
                     </button>
                     <button
                       onClick={() => setAdminUserFilter('old')}
                       className={`px-4 py-2 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 ${adminUserFilter === 'old' ? 'bg-amber-600 text-white' : 'bg-slate-950 text-slate-400 hover:text-white'}`}
                     >
-                      <span>🗂️ Old Users Folder</span>
-                      <span className="bg-amber-950 px-1.5 py-0.5 rounded-full text-[10px] text-amber-300 font-bold">{oldUsersCount}</span>
+                      <span>🗂️ Old Users ({oldUsersCount})</span>
                     </button>
                   </div>
 
@@ -1684,7 +1687,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    <button type="submit" className="w-full py-3.5 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-teal-500 rounded-xl font-bold text-white text-sm shadow-lg shadow-blue-900/20 transition flex items-center justify-center space-x-2">
+                    <button type="submit" className="w-full py-3.5 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-blue-500 rounded-xl font-bold text-white text-sm shadow-lg shadow-blue-900/20 transition flex items-center justify-center space-x-2">
                       <span>↗ Submit Cashout Request</span>
                     </button>
                   </form>
@@ -2202,7 +2205,7 @@ function UserAdminRow({ usr, db, serialNo }) {
     <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
         <div>
-          <p className="text-sm font-bold text-indigo-400">#{serialNo}. {usr.name || 'No Name'} ({usr.email})</p>
+          <p className="text-sm font-bold text-indigo-400">#{serialNo}. {usr.name || 'No Name'} ({usr.email}) {usr.isOldUser === false && <span className="ml-2 px-2 py-0.5 bg-emerald-900 text-emerald-300 text-[10px] rounded-full font-bold">NEW</span>}</p>
           <p className="text-xs text-slate-400">Phone: {usr.phone || 'N/A'} | Ref Code: <span className="text-cyan-400 font-mono">{usr.referralCode || 'N/A'}</span> | Referred By: <span className="text-indigo-400">{usr.referredBy || 'None'}</span></p>
           <p className="text-xs text-slate-400">Package: <span className="text-amber-400">{usr.package || 'None'}</span> | Created: <span className="text-cyan-400">{createdAtDate}</span> | Status: <span className={usr.status === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
         </div>
@@ -2235,7 +2238,7 @@ function UserAdminRow({ usr, db, serialNo }) {
           />
         </div>
         <div>
-          <label className="text-[10px] text-slate-400 uppercase tracking-wider">EarningsWallet (৳)</label>
+          <label className="text-[10px] text-slate-400 uppercase tracking-wider">Earnings Wallet (৳)</label>
           <input 
             type="number" 
             value={earnWallet} 
@@ -2248,7 +2251,7 @@ function UserAdminRow({ usr, db, serialNo }) {
             onClick={handleUpdateBalance}
             className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-xs font-bold rounded-lg text-white shadow"
           >
-            Update Balances
+            Update balances
           </button>
         </div>
       </div>
