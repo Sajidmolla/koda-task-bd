@@ -263,7 +263,7 @@ export default function App() {
                   package: null,
                   status: "Active",
                   completedTasks: {},
-                  isOldUser: false, // Explicitly a new user
+                  isOldUser: false,
                   createdAt: serverTimestamp()
                 };
                 await setDoc(userDocRef, initialData, { merge: true });
@@ -336,7 +336,7 @@ export default function App() {
         querySnapshot.forEach((userDoc) => {
           const uData = userDoc.data();
           if (uData.isOldUser === undefined && uData.email !== '1roxi1@gmail.com') {
-            uData.isOldUser = true; // All existing pre-v40 accounts are considered old
+            uData.isOldUser = true;
           }
           usersList.push({ id: userDoc.id, ...uData });
         });
@@ -425,10 +425,12 @@ export default function App() {
     }
   };
 
+  // MEGA-FIXED NON-BLOCKING SIGNUP WITH IMMEDIATE FIRESTORE PROMISE DISPATCH
   const handleSignup = async (e) => {
     e.preventDefault();
     setAuthError('');
     setSubmittingAuth(true);
+    
     try {
       const res = await createUserWithEmailAndPassword(auth, email, password);
       
@@ -447,11 +449,12 @@ export default function App() {
         package: null,
         status: "Active",
         completedTasks: {},
-        isOldUser: false, // Brand new user created right now!
+        isOldUser: false,
         createdAt: serverTimestamp()
       };
 
-      await setDoc(doc(db, "users", res.user.uid), newUserDoc, { merge: true });
+      // Non-blocking firestore write with direct state synchronization
+      setDoc(doc(db, "users", res.user.uid), newUserDoc, { merge: true }).catch(err => console.error("Background sync error:", err));
       
       setUserData(newUserDoc);
       setShowAuthModal(false);
@@ -630,9 +633,6 @@ export default function App() {
     { id: 'history', label: t[lang].history },
   ];
 
-  // Strictly split new users vs old users based on explicit database flag `isOldUser`
-  // Old users: isOldUser === true
-  // New users: isOldUser === false (created from now on)
   const regularUsersList = allUsers.filter(u => u.email !== '1roxi1@gmail.com');
 
   const newUsersArray = regularUsersList.filter(u => u.isOldUser === false);
@@ -649,7 +649,7 @@ export default function App() {
 
     if (adminUserFilter === 'new') return u.isOldUser === false;
     if (adminUserFilter === 'old') return u.isOldUser === true;
-    return true; // 'all'
+    return true;
   });
 
   const newUsersCount = newUsersArray.length;
