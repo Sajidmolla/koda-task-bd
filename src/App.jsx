@@ -90,7 +90,6 @@ export default function App() {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskReward, setNewTaskReward] = useState('');
   const [newTaskLink, setNewTaskLink] = useState('');
-  const [newTaskTimer, setNewTaskTimer] = useState(25);
   const [userSearchQuery, setUserSearchQuery] = useState('');
 
   const [packages, setPackages] = useState([
@@ -1016,7 +1015,7 @@ export default function App() {
               {authMode === 'login' ? (
                 <p>Don't have an account? <button onClick={()=>setAuthMode('signup')} className="text-blue-400 underline">Sign Up</button></p>
               ) : (
-                <p>Already have an account? <button onClick={()=>setAuthMode('login')} className="text-blue-400 underline">Sign In</button></p>
+                <p>Already have an account? <button onClick={()=>setAuthNode('login')} className="text-blue-400 underline">Sign In</button></p>
               )}
             </div>
             <button onClick={() => setShowAuthModal(false)} className="w-full text-center text-xs text-slate-500">Close</button>
