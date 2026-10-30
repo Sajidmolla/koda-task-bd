@@ -29,8 +29,8 @@ const firebaseConfig = {
   projectId: "koda-task-bd-43172",
   storageBucket: "koda-task-bd-43172.firebasestorage.app",
   messagingSenderId: "17624227098",
-  appId: "1:17624227098:web:3cab9bd3789f286bd520a3",
-  measurementId: "G-TKD5PVVQ8G"
+  appId: "1:17624227098:web:08af8b7a815921aad520a3",
+  measurementId: "G-1N4NEPC6SJ"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -55,10 +55,10 @@ export default function App() {
   const [signupReferralCode, setSignupReferralCode] = useState('');
   const [authError, setAuthError] = useState('');
 
-  // Profile editable states (only Name is editable now)
+  // Profile editable states
   const [profileName, setProfileName] = useState('');
 
-  // Deposit gateway states matching screenshot design
+  // Deposit gateway states
   const [depositMethod, setDepositMethod] = useState('bKash');
   const [depositAmount, setDepositAmount] = useState('');
   const [depositTrxId, setDepositTrxId] = useState('');
@@ -80,7 +80,7 @@ export default function App() {
     specialReferral: "KODA777"
   });
 
-  // Default Tasks with configurable timer (in seconds) and link
+  // Default Tasks
   const [tasks, setTasks] = useState([
     { id: '1', title: 'YouTube Video Watch & Subscribe', reward: 10, link: 'https://youtube.com', timerSec: 25 },
     { id: '2', title: 'Facebook Page Follow & Like', reward: 8, link: 'https://facebook.com', timerSec: 20 },
@@ -96,7 +96,7 @@ export default function App() {
   const [newTaskTimer, setNewTaskTimer] = useState(25);
   const [userSearchQuery, setUserSearchQuery] = useState('');
 
-  // Membership Plans matching user image style
+  // Membership Plans
   const [packages, setPackages] = useState([
     { 
       id: 'p1', 
@@ -151,10 +151,10 @@ export default function App() {
   const [allWithdrawals, setAllWithdrawals] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
 
-  // User personal history & completed tasks states
+  // User personal history
   const [myDeposits, setMyDeposits] = useState([]);
   const [myWithdrawals, setMyWithdrawals] = useState([]);
-  const [completedTasks, setCompletedTasks] = useState({}); // { taskId: timestamp }
+  const [completedTasks, setCompletedTasks] = useState({});
 
   const [selectedTask, setSelectedTask] = useState(null);
   const [timer, setTimer] = useState(25);
@@ -360,7 +360,6 @@ export default function App() {
     return () => clearInterval(interval);
   }, [timerActive, timer]);
 
-  // Professional error message translator to hide Firebase technical jargon
   const getFriendlyErrorMessage = (errorCode) => {
     switch (errorCode) {
       case 'auth/invalid-credential':
@@ -456,6 +455,7 @@ export default function App() {
       setDepositTrxId('');
       setSenderPhone('');
     } catch (err) {
+      console.error("Deposit Error Details:", err);
       alert("Error: " + err.message);
     }
   };
@@ -499,6 +499,7 @@ export default function App() {
       setWithdrawAmount('');
       setWithdrawAccount('');
     } catch (err) {
+      console.error("Withdrawal Error Details:", err);
       alert("Error: " + err.message);
     }
   };
@@ -514,7 +515,7 @@ export default function App() {
     }
 
     if (userData.depositWallet < finalPrice) {
-      alert(`Insufficient deposit balance (৳${userData.depositWallet}). Required ৳${finalPrice} (with discount if applicable)! Please deposit first!`);
+      alert(`Insufficient deposit balance (৳${userData.depositWallet}). Required ৳${finalPrice}! Please deposit first!`);
       setActiveTab('deposit');
       return;
     }
@@ -548,7 +549,6 @@ export default function App() {
     alert("Copied to clipboard: " + text);
   };
 
-  // Check if task is locked (completed within last 24 hours)
   const isTaskLocked = (taskId) => {
     const lastCompleted = completedTasks[taskId];
     if (!lastCompleted) return false;
@@ -608,7 +608,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col justify-between w-full overflow-x-hidden">
       <div className="w-full">
-        {/* Top Header fully responsive & wrapped for mobile */}
         <header className="bg-slate-900 border-b border-slate-800 px-3 md:px-8 py-3 sticky top-0 z-50 w-full">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3 w-full">
             <div className="flex items-center justify-between w-full md:w-auto">
@@ -641,7 +640,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Fully responsive wrapped/scrollable navigation tabs for mobile with Referral on slide */}
             <nav className="flex items-center space-x-1 md:space-x-4 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-none flex-nowrap md:flex-wrap justify-start md:justify-center">
               {tabs.map((tab) => {
                 const isActive = activeTab === tab.id;
@@ -665,7 +663,6 @@ export default function App() {
               )}
             </nav>
 
-            {/* Right side desktop user actions */}
             <div className="hidden md:flex items-center space-x-3">
               <button 
                 onClick={() => setLang(lang === 'en' ? 'bn' : 'en')}
@@ -698,13 +695,11 @@ export default function App() {
           </div>
         </header>
 
-        {/* Main Content Area */}
         <main className="flex-1 p-3 md:p-8 bg-slate-950 overflow-y-auto max-w-7xl mx-auto w-full">
           {isAdmin && activeTab === 'admin' ? (
             <div className="space-y-6">
               <h2 className="text-xl md:text-2xl font-bold text-indigo-400">Admin Control Panel</h2>
               
-              {/* Admin Sub-Tabs matching user screenshot style */}
               <div className="flex flex-wrap items-center gap-2 bg-slate-900 border border-slate-800 p-2 rounded-xl">
                 <button
                   onClick={() => setAdminSubTab('overview')}
@@ -744,7 +739,6 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Sub-Tab 1: Overview */}
               {adminSubTab === 'overview' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl">
@@ -766,7 +760,6 @@ export default function App() {
                 </div>
               )}
 
-              {/* Sub-Tab 2: Finance & TrxID Verification */}
               {adminSubTab === 'finance' && (
                 <div className="space-y-6">
                   <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-2xl shadow-xl space-y-4">
@@ -817,14 +810,14 @@ export default function App() {
                               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-center">
                                 <input 
                                   type="text" 
-                                  placeholder="Payout TrxID (e.g. PAY-12345)"
+                                  placeholder="Payout TrxID"
                                   id={`trx-${wit.id}`}
                                   defaultValue={`PAY-${Math.random().toString(36).substring(2, 9).toUpperCase()}`}
                                   className="bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white w-full sm:w-48 font-mono"
                                 />
                                 <input 
                                   type="text" 
-                                  placeholder="Note (e.g. Dispatched via bKash)"
+                                  placeholder="Note"
                                   id={`note-${wit.id}`}
                                   defaultValue={`Dispatched via ${wit.method}`}
                                   className="bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white w-full sm:w-48"
@@ -873,7 +866,6 @@ export default function App() {
                 </div>
               )}
 
-              {/* Sub-Tab 3: Packages */}
               {adminSubTab === 'packages' && (
                 <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-2xl shadow-xl space-y-6">
                   <h3 className="text-lg font-semibold text-slate-200">Manage Membership Packages</h3>
@@ -894,7 +886,7 @@ export default function App() {
                     />
                     <input 
                       type="text" 
-                      placeholder="Validity (e.g. 30 Days)" 
+                      placeholder="Validity" 
                       value={newPkgValidity} 
                       onChange={(e)=>setNewPkgValidity(e.target.value)} 
                       className="bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white"
@@ -960,10 +952,9 @@ export default function App() {
                 </div>
               )}
 
-              {/* Sub-Tab 4: Tasks & Task Synthesizer */}
               {adminSubTab === 'tasks' && (
                 <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-2xl shadow-xl space-y-6">
-                  <h3 className="text-lg font-semibold mb-4 text-slate-200">Tasks & Task Synthesizer (Link & Timer Adjustable)</h3>
+                  <h3 className="text-lg font-semibold mb-4 text-slate-200">Tasks & Task Synthesizer</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     <input 
                       type="text" 
@@ -1038,13 +1029,12 @@ export default function App() {
                 </div>
               )}
 
-              {/* Sub-Tab 5: User Control (Matching user screenshot style) */}
               {adminSubTab === 'users' && (
                 <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-2xl shadow-xl space-y-6">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                       <h3 className="text-lg font-semibold text-slate-200">Registered Users ({filteredUsers.length})</h3>
-                      <p className="text-xs text-slate-400 mt-0.5">Adjust wallet balances, inspect packages, or toggle account suspension.</p>
+                      <p className="text-xs text-slate-400 mt-0.5">Adjust wallet balances or toggle account suspension.</p>
                     </div>
                     <div className="w-full sm:w-72">
                       <input 
@@ -1067,76 +1057,63 @@ export default function App() {
                 </div>
               )}
 
-              {/* Sub-Tab 6: Payment Numbers & Limits & Special Referral Setup */}
               {adminSubTab === 'gateways' && (
                 <div className="bg-slate-900 border border-slate-800 p-4 md:p-6 rounded-2xl shadow-xl space-y-6">
                   <h3 className="text-lg font-semibold mb-2 text-slate-200">Payment Numbers & Withdrawal Limits</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                     <div>
                       <label className="text-xs text-slate-400">bKash Personal</label>
-                      <div className="flex mt-1 space-x-2">
-                        <input 
-                          type="text" 
-                          value={gateways.bkash} 
-                          onChange={(e)=>setGateways({...gateways, bkash: e.target.value})} 
-                          className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white"
-                        />
-                      </div>
+                      <input 
+                        type="text" 
+                        value={gateways.bkash} 
+                        onChange={(e)=>setGateways({...gateways, bkash: e.target.value})} 
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white mt-1"
+                      />
                     </div>
                     <div>
                       <label className="text-xs text-slate-400">Nagad Personal</label>
-                      <div className="flex mt-1 space-x-2">
-                        <input 
-                          type="text" 
-                          value={gateways.nagad} 
-                          onChange={(e)=>setGateways({...gateways, nagad: e.target.value})} 
-                          className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white"
-                        />
-                      </div>
+                      <input 
+                        type="text" 
+                        value={gateways.nagad} 
+                        onChange={(e)=>setGateways({...gateways, nagad: e.target.value})} 
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white mt-1"
+                      />
                     </div>
                     <div>
                       <label className="text-xs text-slate-400">Rocket Personal</label>
-                      <div className="flex mt-1 space-x-2">
-                        <input 
-                          type="text" 
-                          value={gateways.rocket} 
-                          onChange={(e)=>setGateways({...gateways, rocket: e.target.value})} 
-                          className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white"
-                        />
-                      </div>
+                      <input 
+                        type="text" 
+                        value={gateways.rocket} 
+                        onChange={(e)=>setGateways({...gateways, rocket: e.target.value})} 
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white mt-1"
+                      />
                     </div>
                     <div>
                       <label className="text-xs text-slate-400">Binance ID</label>
-                      <div className="flex mt-1 space-x-2">
-                        <input 
-                          type="text" 
-                          value={gateways.binance} 
-                          onChange={(e)=>setGateways({...gateways, binance: e.target.value})} 
-                          className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white"
-                        />
-                      </div>
+                      <input 
+                        type="text" 
+                        value={gateways.binance} 
+                        onChange={(e)=>setGateways({...gateways, binance: e.target.value})} 
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white mt-1"
+                      />
                     </div>
                     <div>
                       <label className="text-xs text-slate-400">Minimum Withdrawal (৳)</label>
-                      <div className="flex mt-1 space-x-2">
-                        <input 
-                          type="number" 
-                          value={gateways.minWithdraw} 
-                          onChange={(e)=>setGateways({...gateways, minWithdraw: Number(e.target.value)})} 
-                          className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white"
-                        />
-                      </div>
+                      <input 
+                        type="number" 
+                        value={gateways.minWithdraw} 
+                        onChange={(e)=>setGateways({...gateways, minWithdraw: Number(e.target.value)})} 
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white mt-1"
+                      />
                     </div>
                     <div>
-                      <label className="text-xs text-slate-400">Special Admin Referral Code (10% Discount)</label>
-                      <div className="flex mt-1 space-x-2">
-                        <input 
-                          type="text" 
-                          value={gateways.specialReferral || "KODA777"} 
-                          onChange={(e)=>setGateways({...gateways, specialReferral: e.target.value})} 
-                          className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white font-mono"
-                        />
-                      </div>
+                      <label className="text-xs text-slate-400">Special Admin Referral Code</label>
+                      <input 
+                        type="text" 
+                        value={gateways.specialReferral || "KODA777"} 
+                        onChange={(e)=>setGateways({...gateways, specialReferral: e.target.value})} 
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white font-mono mt-1"
+                      />
                     </div>
                   </div>
                   <button 
@@ -1147,7 +1124,6 @@ export default function App() {
                   </button>
                 </div>
               )}
-
             </div>
           ) : activeTab === 'dashboard' ? (
             <div className="space-y-6">
@@ -1178,7 +1154,7 @@ export default function App() {
               </div>
 
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
-                <h3 className="text-lg font-semibold mb-4 text-slate-200">Available Tasks (Timer & Link Enabled)</h3>
+                <h3 className="text-lg font-semibold mb-4 text-slate-200">Available Tasks</h3>
                 <div className="space-y-3">
                   {tasks.map(task => {
                     const locked = isTaskLocked(task.id);
@@ -1189,7 +1165,7 @@ export default function App() {
                           <h4 className="font-medium text-slate-200 text-sm md:text-base">{task.title}</h4>
                           <div className="flex flex-wrap items-center gap-3 mt-1">
                             <span className="text-xs text-blue-400 font-semibold">Reward: ৳{task.reward}</span>
-                            <span className="text-xs text-amber-400 bg-amber-950/50 px-2 py-0.5 rounded border border-amber-800/50">⏱️ Timer: {task.timerSec} Seconds</span>
+                            <span className="text-xs text-amber-400 bg-amber-950/50 px-2 py-0.5 rounded border border-amber-800/50">⏱️ Timer: {task.timerSec}s</span>
                             <a href={task.link} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 underline hover:text-indigo-300">Visit Link ↗</a>
                           </div>
                         </div>
@@ -1238,7 +1214,7 @@ export default function App() {
                         <h4 className="font-medium text-slate-200 text-sm md:text-base">{task.title}</h4>
                         <div className="flex flex-wrap items-center gap-3 mt-1">
                           <span className="text-xs text-blue-400 font-semibold">Reward: ৳{task.reward}</span>
-                          <span className="text-xs text-amber-400 bg-amber-950/50 px-2 py-0.5 rounded border border-amber-800/50">⏱️ Timer: {task.timerSec} Seconds</span>
+                          <span className="text-xs text-amber-400 bg-amber-950/50 px-2 py-0.5 rounded border border-amber-800/50">⏱️ Timer: {task.timerSec}s</span>
                           <a href={task.link} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 underline hover:text-indigo-300">Visit Link ↗</a>
                         </div>
                       </div>
@@ -1277,7 +1253,7 @@ export default function App() {
             <div className="space-y-6">
               <div className="text-center max-w-2xl mx-auto mb-8">
                 <h2 className="text-2xl md:text-3xl font-bold text-amber-400 mb-2">Select Membership Plan</h2>
-                <p className="text-xs md:text-sm text-slate-400">Choose a tier that fits your daily availability. Upgrades take effect immediately and quota resets every 24 hours.</p>
+                <p className="text-xs md:text-sm text-slate-400">Choose a tier that fits your daily availability.</p>
                 {userData?.referredBy && userData?.referredBy.toLowerCase() === (gateways.specialReferral || "KODA777").toLowerCase() && (
                   <div className="mt-3 inline-block bg-emerald-950 text-emerald-400 px-4 py-1.5 rounded-full text-xs font-bold border border-emerald-800">
                     🎉 Special Referral Applied: 10% Discount on All Memberships!
@@ -1330,7 +1306,7 @@ export default function App() {
 
                       <button 
                         onClick={() => handleBuyPackage(pkg)}
-                        className="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-xl font-bold text-white text-sm shadow-lg shadow-amber-900/20 transition"
+                        className="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-xl font-bold text-white text-sm shadow-lg transition"
                       >
                         Deposit ৳{effectivePrice} to Activate &gt;
                       </button>
@@ -1338,27 +1314,15 @@ export default function App() {
                   );
                 })}
               </div>
-
-              <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-center text-xs text-slate-400 gap-3">
-                <div className="flex items-center space-x-2">
-                  <span className="text-emerald-400">🛡️</span>
-                  <span>Direct Deposit Verification: Send funds via personal bKash or Nagad to activate packages instantly upon admin transaction validation.</span>
-                </div>
-                <button onClick={() => setActiveTab('deposit')} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-lg whitespace-nowrap">
-                  View Deposit Instructions
-                </button>
-              </div>
             </div>
           ) : activeTab === 'deposit' ? (
             <div className="space-y-6 max-w-5xl mx-auto">
               <div>
-                <p className="text-xs text-blue-400 font-medium">Manual Gateway • Personal Account Verification • Deduplication Indexed</p>
+                <p className="text-xs text-blue-400 font-medium">Manual Gateway • Personal Account Verification</p>
                 <h2 className="text-2xl md:text-3xl font-bold text-white tracking-wide mt-1">Deposit Verification Gateway</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Transfer to our verified personal line, submit your Transaction ID (TrxID), and balance or package will be credited automatically.</p>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Left Column: Select Provider & Official Number */}
                 <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6">
                   <div>
                     <label className="text-xs text-slate-400 block mb-2 font-medium">1. Select Financial Provider</label>
@@ -1380,10 +1344,7 @@ export default function App() {
                   <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-slate-400">Official {depositMethod} Personal Line:</span>
-                      <span className="text-xs text-emerald-400 font-semibold flex items-center space-x-1">
-                        <span>●</span>
-                        <span>Verified Active</span>
-                      </span>
+                      <span className="text-xs text-emerald-400 font-semibold">Verified Active</span>
                     </div>
                     <div className="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-800">
                       <span className="text-lg md:text-xl font-extrabold font-mono text-white tracking-wider">
@@ -1391,51 +1352,41 @@ export default function App() {
                       </span>
                       <button 
                         onClick={() => copyToClipboard(gateways[depositMethod.toLowerCase()] || gateways.bkash)}
-                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs rounded-lg text-white font-medium flex items-center space-x-1 border border-slate-700"
+                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs rounded-lg text-white font-medium border border-slate-700"
                       >
-                        <span>📋</span>
-                        <span>Copy</span>
+                        Copy
                       </button>
                     </div>
                   </div>
-
-                  <div className="space-y-2 text-xs text-slate-400">
-                    <p className="text-slate-300 font-semibold mb-1">Instructions:</p>
-                    <p>01. Open your {depositMethod} App and choose <strong className="text-slate-200">Send Money</strong>.</p>
-                    <p>02. Send exact amount to <strong className="text-blue-400 font-mono">{gateways[depositMethod.toLowerCase()] || gateways.bkash}</strong>.</p>
-                    <p>03. Copy the returned <strong className="text-slate-200">Transaction ID (TrxID)</strong> and complete the verification form on the right.</p>
-                  </div>
                 </div>
 
-                {/* Right Column: Submit Reference Form with Sender Phone */}
                 <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl flex flex-col justify-between">
                   <form onSubmit={handleDepositSubmit} className="space-y-4">
                     <div>
-                      <label className="text-xs text-slate-400 block mb-1 font-medium">2. Submit Transaction Reference</label>
-                      <label className="text-[11px] text-slate-400 block mb-1">Target Membership Tier (Optional)</label>
+                      <label className="text-xs text-slate-400 block mb-1">Target Membership Tier</label>
                       <select
                         value={targetTier}
                         onChange={(e) => setTargetTier(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:border-blue-500 focus:outline-none"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:outline-none"
                       >
                         <option value="Direct Balance">Direct Balance</option>
                         {packages.map(p => (
                           <option key={p.id} value={`${p.name} — ৳${p.price}`}>
-                            {p.name} — ৳{p.price} ({p.dailyTasks} Daily Tasks)
+                            {p.name} — ৳{p.price}
                           </option>
                         ))}
                       </select>
                     </div>
 
                     <div>
-                      <label className="text-xs text-slate-400 block mb-1">Sender Mobile Number (From which you sent money) *</label>
+                      <label className="text-xs text-slate-400 block mb-1">Sender Mobile Number *</label>
                       <input 
                         type="text" 
                         required 
                         placeholder="01700000000"
                         value={senderPhone} 
                         onChange={(e)=>setSenderPhone(e.target.value)} 
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:border-blue-500 focus:outline-none"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:outline-none"
                       />
                     </div>
 
@@ -1447,7 +1398,7 @@ export default function App() {
                         placeholder="500"
                         value={depositAmount} 
                         onChange={(e)=>setDepositAmount(e.target.value)} 
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:border-blue-500 focus:outline-none"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white focus:outline-none"
                       />
                     </div>
 
@@ -1456,24 +1407,22 @@ export default function App() {
                       <input 
                         type="text" 
                         required 
-                        placeholder="SADFDF"
+                        placeholder="TRX12345"
                         value={depositTrxId} 
                         onChange={(e)=>setDepositTrxId(e.target.value)} 
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white font-mono uppercase focus:border-blue-500 focus:outline-none"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white font-mono uppercase focus:outline-none"
                       />
                     </div>
 
-                    <button type="submit" className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 rounded-xl font-bold text-white text-sm shadow-lg shadow-emerald-900/20 transition flex items-center justify-center space-x-2">
-                      <span>🛡️ Submit Deposit Reference</span>
+                    <button type="submit" className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-bold text-white text-sm shadow-lg transition">
+                      Submit Deposit Reference
                     </button>
                   </form>
                 </div>
               </div>
 
-              {/* Deposit Audit Log matching user screenshot design */}
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4">
                 <h3 className="text-lg font-semibold text-slate-200">Deposit Audit Log</h3>
-                
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs text-slate-300">
                     <thead>
@@ -1482,32 +1431,20 @@ export default function App() {
                         <th className="py-3 px-4">Method</th>
                         <th className="py-3 px-4">Sender Phone</th>
                         <th className="py-3 px-4">Amount</th>
-                        <th className="py-3 px-4">Package Target</th>
                         <th className="py-3 px-4">Status</th>
-                        <th className="py-3 px-4">Admin Note</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/60 font-mono">
                       {myDeposits.length === 0 ? (
-                        <tr>
-                          <td colSpan="7" className="text-center py-8 text-slate-500 font-sans">
-                            No deposits recorded yet.
-                          </td>
-                        </tr>
+                        <tr><td colSpan="5" className="text-center py-8 text-slate-500 font-sans">No deposits recorded yet.</td></tr>
                       ) : (
                         myDeposits.map(d => (
-                          <tr key={d.id} className="hover:bg-slate-950/50 transition">
+                          <tr key={d.id} className="hover:bg-slate-950/50">
                             <td className="py-3.5 px-4 text-white font-bold">{d.trxId}</td>
                             <td className="py-3.5 px-4 font-sans">{d.method}</td>
-                            <td className="py-3.5 px-4 text-slate-300">{d.senderPhone || '—'}</td>
+                            <td className="py-3.5 px-4">{d.senderPhone || '—'}</td>
                             <td className="py-3.5 px-4 text-emerald-400 font-bold font-sans">৳{d.amount}</td>
-                            <td className="py-3.5 px-4 text-slate-300 font-sans">{d.targetTier || 'Direct Balance'}</td>
-                            <td className="py-3.5 px-4 font-sans font-semibold">
-                              <span className={`${d.status === 'Approved' ? 'text-emerald-400' : d.status === 'Rejected' ? 'text-red-400' : 'text-amber-400'}`}>
-                                {d.status}
-                              </span>
-                            </td>
-                            <td className="py-3.5 px-4 text-slate-400 font-sans">{d.adminNote || '—'}</td>
+                            <td className="py-3.5 px-4 font-sans font-semibold text-amber-400">{d.status}</td>
                           </tr>
                         ))
                       )}
@@ -1519,19 +1456,9 @@ export default function App() {
           ) : activeTab === 'withdraw' ? (
             <div className="space-y-6 max-w-4xl mx-auto">
               <div>
-                <p className="text-xs text-blue-400 font-medium">Mobile Banking Disbursement • bKash / Nagad / Rocket • Zero Unjustified Holds</p>
-                <h2 className="text-2xl md:text-3xl font-bold text-white tracking-wide mt-1">Wallet Cashout Gateway</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Transfer earnings directly to your personal mobile banking account. Requests are audited and settled with verifiable reference IDs.</p>
+                <h2 className="text-2xl md:text-3xl font-bold text-white tracking-wide">Wallet Cashout Gateway</h2>
+                <p className="text-xs text-slate-400 mt-0.5">Transfer earnings directly to your personal mobile banking account.</p>
               </div>
-
-              {!userData?.package && (
-                <div className="bg-amber-950/80 border border-amber-800 text-amber-200 p-4 rounded-xl text-xs flex items-center justify-between">
-                  <span>⚠️ <strong>Notice:</strong> You must have an active membership package to withdraw referral/earnings rewards.</span>
-                  <button onClick={() => setActiveTab('membership')} className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg whitespace-nowrap ml-2">
-                    Buy Package
-                  </button>
-                </div>
-              )}
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6">
@@ -1549,7 +1476,7 @@ export default function App() {
                             type="button"
                             key={m}
                             onClick={() => setWithdrawMethod(m)}
-                            className={`py-2.5 text-xs font-semibold rounded-xl border transition ${withdrawMethod === m ? 'bg-blue-600 border-blue-500 text-white shadow-lg' : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'}`}
+                            className={`py-2.5 text-xs font-semibold rounded-xl border transition ${withdrawMethod === m ? 'bg-blue-600 border-blue-500 text-white shadow-lg' : 'bg-slate-800 border-slate-700 text-slate-300'}`}
                           >
                             {m}
                           </button>
@@ -1565,7 +1492,7 @@ export default function App() {
                         placeholder="01700000000"
                         value={withdrawAccount} 
                         onChange={(e)=>setWithdrawAccount(e.target.value)} 
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:border-blue-500 focus:outline-none"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none"
                       />
                     </div>
 
@@ -1574,91 +1501,47 @@ export default function App() {
                       <input 
                         type="number" 
                         required
-                        placeholder={`Min ৳${gateways.minWithdraw || 100}, Max ৳25000`}
+                        placeholder={`Min ৳${gateways.minWithdraw || 100}`}
                         value={withdrawAmount} 
                         onChange={(e)=>setWithdrawAmount(e.target.value)} 
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:border-blue-500 focus:outline-none"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none"
                       />
                     </div>
 
-                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 text-xs">
-                      <div className="flex justify-between text-slate-400">
-                        <span>Requested Gross:</span>
-                        <span className="text-white font-mono">৳{Number(withdrawAmount || 0).toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between text-slate-400">
-                        <span>Processing Fee (0%):</span>
-                        <span className="text-red-400 font-mono">-৳0.00</span>
-                      </div>
-                      <div className="flex justify-between text-slate-200 font-bold pt-2 border-t border-slate-800">
-                        <span>Net Receivable:</span>
-                        <span className="text-emerald-400 font-mono text-sm">৳{Number(withdrawAmount || 0).toFixed(2)}</span>
-                      </div>
-                    </div>
-
-                    <button type="submit" className="w-full py-3.5 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-blue-500 rounded-xl font-bold text-white text-sm shadow-lg shadow-blue-900/20 transition flex items-center justify-center space-x-2">
-                      <span>↗ Submit Cashout Request</span>
+                    <button type="submit" className="w-full py-3.5 bg-teal-600 hover:bg-teal-700 rounded-xl font-bold text-white text-sm shadow-lg transition">
+                      Submit Cashout Request
                     </button>
                   </form>
                 </div>
 
                 <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6 h-fit">
-                  <div className="flex items-center space-x-2 text-blue-400 text-sm font-semibold border-b border-slate-800 pb-3">
-                    <span>🛡️</span>
-                    <span>WITHDRAWAL TERMS</span>
+                  <div className="text-blue-400 text-sm font-semibold border-b border-slate-800 pb-3">
+                    🛡️ WITHDRAWAL TERMS
                   </div>
-                  
-                  <div className="space-y-4 text-xs text-slate-400">
-                    <div>
-                      <p className="font-bold text-slate-200 mb-0.5">Threshold Policy</p>
-                      <p>Minimum withdrawal is ৳{gateways.minWithdraw || 100}. Requests below this threshold cannot be processed.</p>
-                    </div>
-                    <div>
-                      <p className="font-bold text-slate-200 mb-0.5">Escrow & Refund Safety</p>
-                      <p>Funds are held safely in escrow during verification. In the rare event of rejection, funds return immediately to your balance.</p>
-                    </div>
-                    <div>
-                      <p className="font-bold text-slate-200 mb-0.5">Reference ID Tracking</p>
-                      <p>Every payout is logged with a verifiable TrxID accessible in your audit log below.</p>
-                    </div>
-                  </div>
+                  <p className="text-xs text-slate-400">Minimum withdrawal is ৳{gateways.minWithdraw || 100}. Requests are processed securely.</p>
                 </div>
               </div>
 
-              {/* Withdrawal Audit Log matching screenshot design exactly */}
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4 mt-6">
                 <h3 className="text-lg font-semibold text-slate-200">Withdrawal Audit Log</h3>
-                
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs text-slate-300">
                     <thead>
                       <tr className="border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[10px]">
-                        <th className="py-3 px-4">Gross</th>
-                        <th className="py-3 px-4">Net Disbursed</th>
+                        <th className="py-3 px-4">Amount</th>
                         <th className="py-3 px-4">Status</th>
                         <th className="py-3 px-4">Payout TrxID</th>
-                        <th className="py-3 px-4">Admin Note</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/60 font-mono">
                       {myWithdrawals.length === 0 ? (
-                        <tr>
-                          <td colSpan="5" className="text-center py-8 text-slate-500 font-sans">
-                            No withdrawal requests logged yet.
-                          </td>
-                        </tr>
+                        <tr><td colSpan="3" className="text-center py-8 text-slate-500 font-sans">No withdrawal requests logged yet.</td></tr>
                       ) : (
                         myWithdrawals.map(w => (
-                          <tr key={w.id} className="hover:bg-slate-950/50 transition">
+                          <tr key={w.id} className="hover:bg-slate-950/50">
                             <td className="py-3.5 px-4 text-white font-bold">৳{Number(w.amount).toFixed(2)}</td>
-                            <td className="py-3.5 px-4 text-cyan-400 font-bold">৳{Number(w.amount).toFixed(2)}</td>
-                            <td className="py-3.5 px-4 font-sans font-semibold">
-                              <span className={`${w.status === 'Approved' ? 'text-emerald-400' : w.status === 'Rejected' ? 'text-red-400' : 'text-amber-400'}`}>
-                                {w.status}
-                              </span>
-                            </td>
+                            <td className="py-3.5 px-4 font-sans font-semibold text-amber-400">{w.status}</td>
                             <td className="py-3.5 px-4 text-slate-300">{w.payoutTrxId || '—'}</td>
-                            <td className="py-3.5 px-4 text-slate-400 font-sans">{w.adminNote || 'Pending review'}</td>
                           </tr>
                         ))
                       )}
@@ -1669,141 +1552,32 @@ export default function App() {
             </div>
           ) : activeTab === 'referral' ? (
             <div className="space-y-6 max-w-4xl mx-auto">
-              <div>
-                <h2 className="text-2xl md:text-3xl font-bold text-amber-400 tracking-wide">Referral Program & Rewards</h2>
-                <p className="text-xs text-slate-400 mt-1">Invite friends and earn rewards when they activate their memberships.</p>
-              </div>
-
-              {!userData?.package ? (
-                <div className="bg-slate-900 border border-amber-500/30 p-8 rounded-2xl shadow-2xl text-center space-y-4">
-                  <div className="text-5xl">🔒</div>
-                  <h3 className="text-xl font-bold text-slate-100">Referral Program Locked</h3>
-                  <p className="text-xs text-slate-400 max-w-md mx-auto">
-                    The referral system and unique referral link are unlocked exclusively for members who have purchased and activated a membership package. Normal users can view details below but cannot generate codes or earn referral bonuses yet.
-                  </p>
-                  <button 
-                    onClick={() => setActiveTab('membership')} 
-                    className="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold rounded-xl shadow-lg transition"
-                  >
-                    Unlock Referral by Purchasing Membership Now &gt;
-                  </button>
-                </div>
-              ) : (
-                <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6">
-                  <div>
-                    <label className="text-xs text-slate-400 block mb-1 font-medium">Your Unique Referral Code & Link</label>
-                    <div className="flex space-x-2">
-                      <input 
-                        type="text" 
-                        readOnly
-                        value={`https://kodatask.app/register?ref=${myReferralCodeDisplay}`} 
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-cyan-400 font-mono"
-                      />
-                      <button 
-                        onClick={() => copyToClipboard(`https://kodatask.app/register?ref=${myReferralCodeDisplay}`)} 
-                        className="px-5 bg-blue-600 hover:bg-blue-700 text-xs font-bold rounded-xl text-white whitespace-nowrap shadow"
-                      >
-                        Copy Link
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                      <p className="text-[10px] text-slate-400 uppercase">Total Referrals</p>
-                      <p className="text-2xl font-bold text-blue-400 mt-1">{myReferralCount} Users</p>
-                    </div>
-                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                      <p className="text-[10px] text-slate-400 uppercase">Referral Earnings</p>
-                      <p className="text-2xl font-bold text-emerald-400 mt-1">৳{userData?.referralEarnings || 0}</p>
-                    </div>
-                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                      <p className="text-[10px] text-slate-400 uppercase">Special Discount Status</p>
-                      <p className="text-xs font-bold text-amber-400 mt-2">Active (10% Off)</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Milestones Info Card */}
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4">
-                <h3 className="text-lg font-semibold text-slate-200">Milestone Rewards Structure</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1">
-                    <p className="font-bold text-amber-400">10 Invites</p>
-                    <p className="text-slate-300">Reward: <strong className="text-emerald-400">৳500</strong> Cash Bonus</p>
-                    <p className="text-[10px] text-slate-500">(Must have active membership)</p>
-                  </div>
-                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1">
-                    <p className="font-bold text-amber-400">20 Invites</p>
-                    <p className="text-slate-300">Reward: <strong className="text-emerald-400">৳1,500</strong> Cash Bonus</p>
-                    <p className="text-[10px] text-slate-500">(Must have active membership)</p>
-                  </div>
-                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1">
-                    <p className="font-bold text-amber-400">50 Invites</p>
-                    <p className="text-slate-300">Reward: <strong className="text-emerald-400">৳3,000</strong> Cash Bonus</p>
-                    <p className="text-[10px] text-slate-500">(Must have active membership)</p>
-                  </div>
+              <h2 className="text-2xl font-bold text-amber-400">Referral Program & Rewards</h2>
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6">
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1">Your Unique Referral Link</label>
+                  <input 
+                    type="text" 
+                    readOnly
+                    value={`https://kodatask.app/register?ref=${myReferralCodeDisplay}`} 
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-cyan-400 font-mono"
+                  />
                 </div>
               </div>
             </div>
           ) : activeTab === 'history' ? (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-blue-400">Transaction History Log</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4 shadow-xl">
-                  <h3 className="text-lg font-semibold text-slate-200">Deposit History</h3>
-                  <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-                    {myDeposits.length === 0 ? <p className="text-xs text-slate-400">No deposit history.</p> :
-                      myDeposits.map(d => (
-                        <div key={d.id} className="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center text-xs">
-                          <div>
-                            <p className="font-bold text-blue-400">৳{d.amount} ({d.method})</p>
-                            <p className="text-slate-400 text-[10px]">TrxID: {d.trxId}</p>
-                          </div>
-                          <span className={`font-semibold px-2 py-0.5 rounded text-[10px] ${d.status === 'Approved' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : d.status === 'Rejected' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}`}>
-                            {d.status}
-                          </span>
-                        </div>
-                      ))
-                    }
-                  </div>
-                </div>
-
-                <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4 shadow-xl">
-                  <h3 className="text-lg font-semibold text-slate-200">Withdrawal History</h3>
-                  <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-                    {myWithdrawals.length === 0 ? <p className="text-xs text-slate-400">No withdrawal history.</p> :
-                      myWithdrawals.map(w => (
-                        <div key={w.id} className="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center text-xs">
-                          <div>
-                            <p className="font-bold text-emerald-400">৳{w.amount} ({w.method})</p>
-                            <p className="text-slate-400 text-[10px]">Acc: {w.account}</p>
-                          </div>
-                          <span className={`font-semibold px-2 py-0.5 rounded text-[10px] ${w.status === 'Approved' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : w.status === 'Rejected' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}`}>
-                            {w.status}
-                          </span>
-                        </div>
-                      ))
-                    }
-                  </div>
-                </div>
-              </div>
             </div>
           ) : activeTab === 'profile' ? (
             <div className="space-y-6 max-w-xl mx-auto">
-              <h2 className="text-2xl font-bold text-blue-400 flex items-center space-x-2">
-                <span>👤</span>
-                <span>User Profile Settings</span>
-              </h2>
+              <h2 className="text-2xl font-bold text-blue-400">User Profile Settings</h2>
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-5 shadow-xl">
                 <form onSubmit={async (e) => {
                   e.preventDefault();
                   if (!user) return;
                   try {
-                    await updateDoc(doc(db, "users", user.uid), {
-                      name: profileName
-                    });
+                    await updateDoc(doc(db, "users", user.uid), { name: profileName });
                     setUserData({ ...userData, name: profileName });
                     alert("Profile name updated successfully!");
                   } catch (err) {
@@ -1811,7 +1585,7 @@ export default function App() {
                   }
                 }} className="space-y-4">
                   <div>
-                    <label className="text-xs text-slate-400">Full Name (Editable)</label>
+                    <label className="text-xs text-slate-400">Full Name</label>
                     <input 
                       type="text" 
                       required
@@ -1820,120 +1594,34 @@ export default function App() {
                       className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2.5 text-sm text-white"
                     />
                   </div>
-                  <div>
-                    <label className="text-xs text-slate-400">Email Address (Locked & Unchangeable)</label>
-                    <input 
-                      type="email" 
-                      disabled 
-                      value={user?.email || ''} 
-                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2.5 text-sm text-slate-500 cursor-not-allowed"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-400">Mobile Number (Locked & Unchangeable)</label>
-                    <input 
-                      type="text" 
-                      disabled 
-                      value={userData?.phone || 'N/A'} 
-                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2.5 text-sm text-slate-500 cursor-not-allowed"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-400">Unique Referral Code</label>
-                    <input 
-                      type="text" 
-                      disabled 
-                      value={myReferralCodeDisplay} 
-                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2.5 text-sm text-cyan-400 font-mono cursor-not-allowed"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-400">Active Membership Package</label>
-                    <input 
-                      type="text" 
-                      disabled 
-                      value={userData?.package || 'No Active Package'} 
-                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded p-2.5 text-sm text-amber-400 cursor-not-allowed font-bold"
-                    />
-                  </div>
                   <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold text-white text-sm shadow-lg">
                     Save Profile Name
                   </button>
                 </form>
-
-                {/* Logout Button moved inside Profile */}
-                <div className="pt-4 border-t border-slate-800">
-                  <button 
-                    onClick={handleLogout}
-                    className="w-full py-3 bg-red-600 hover:bg-red-700 rounded-xl font-bold text-white text-sm shadow-lg transition"
-                  >
-                    🚪 Logout Account
-                  </button>
-                </div>
+                <button onClick={handleLogout} className="w-full py-3 bg-red-600 hover:bg-red-700 rounded-xl font-bold text-white text-sm shadow-lg transition">
+                  🚪 Logout Account
+                </button>
               </div>
             </div>
           ) : activeTab === 'support' ? (
             <div className="space-y-6 max-w-xl mx-auto">
-              <h2 className="text-2xl font-bold text-blue-400 flex items-center space-x-2">
-                <span>🎧</span>
-                <span>Customer Support</span>
-              </h2>
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4 text-center">
-                <div className="text-4xl">💬</div>
-                <h3 className="text-lg font-bold text-slate100">Need Help with Deposit or Task?</h3>
-                <p className="text-xs text-slate-400">Our support team is available 24/7 to help you out with any payment or account issues.</p>
-                <div className="pt-4 space-y-3">
-                  <a 
-                    href="https://t.me/Yours_support_admin" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="block w-full py-3 bg-sky-600 hover:bg-sky-700 rounded-xl font-bold text-white text-sm shadow-lg transition flex items-center justify-center space-x-2"
-                  >
-                    <span>✈️</span>
-                    <span>Join Telegram Support (t.me/Yours_support_admin)</span>
-                  </a>
-                </div>
-              </div>
+              <h2 className="text-2xl font-bold text-blue-400">Customer Support</h2>
             </div>
           ) : null}
         </main>
       </div>
 
-      {/* Professional Footer matching user screenshot with Telegram button */}
       <footer className="bg-slate-900 border-t border-slate-800 py-4 px-4 md:px-8 mt-12 text-xs text-slate-400 w-full">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 w-full">
-          <div className="flex flex-wrap items-center gap-2 md:gap-4 text-center md:text-left justify-center md:justify-start">
-            <span className="font-bold text-blue-400 text-sm">KODA Task</span>
-            <span className="hidden sm:inline">•</span>
-            <span>Task-Based Earning Platform</span>
-            <span className="hidden sm:inline">•</span>
-            <span className="flex items-center space-x-1 text-emerald-400">
-              <span>🛡️</span>
-              <span>Personal Deposit Verification</span>
-            </span>
-          </div>
-
-          <div className="items-center space-x-4 flex">
-            <a 
-              href="https://t.me/Yours_support_admin/register?ref=..." 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="flex items-center space-x-1.5 bg-sky-600 hover:bg-sky-700 text-white px-3 py-1.5 rounded-lg font-semibold text-xs shadow transition"
-            >
-              <span>✈️</span>
-              <span>Telegram Support</span>
-            </a>
-            <span className="text-slate-500">© 2026 KODA Task</span>
-          </div>
+          <span className="font-bold text-blue-400 text-sm">KODA Task</span>
+          <span>© 2026 KODA Task</span>
         </div>
       </footer>
 
-      {/* Task Timer Modal */}
       {selectedTask && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-md w-full text-center space-y-4 shadow-2xl">
             <h3 className="text-xl font-bold text-slate-100">{selectedTask.title}</h3>
-            <p className="text-xs text-slate-400">Please complete your task. Link: <a href={selectedTask.link} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">{selectedTask.link}</a></p>
             <div className="text-4xl font-mono text-blue-400 font-bold py-4 bg-slate-950 rounded-xl border border-slate-800">
               00:{timer < 10 ? `0${timer}` : timer}
             </div>
@@ -1941,7 +1629,7 @@ export default function App() {
               <button 
                 onClick={async () => {
                   if(!userData?.package) {
-                    alert("Active membership required to collect reward!");
+                    alert("Active membership required!");
                     setSelectedTask(null);
                     return;
                   }
@@ -1956,24 +1644,18 @@ export default function App() {
                 Collect Reward (৳{selectedTask.reward})
               </button>
             ) : (
-              <p className="text-sm text-slate-400 animate-pulse">Please wait while the task timer completes...</p>
+              <p className="text-sm text-slate-400 animate-pulse">Please wait...</p>
             )}
-            <button 
-              onClick={() => setSelectedTask(null)}
-              className="text-xs text-slate-500 hover:text-slate-300 underline pt-2"
-            >
-              Cancel
-            </button>
+            <button onClick={() => setSelectedTask(null)} className="text-xs text-slate-500 underline pt-2">Cancel</button>
           </div>
         </div>
       )}
 
-      {/* Auth Modal with Referral Input */}
       {showAuthModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-md w-full space-y-4 shadow-2xl">
             <h3 className="text-xl font-bold text-slate-100">
-              {authMode === 'login' ? 'Sign In to KODA Task' : 'Create New Account'}
+              {authMode === 'login' ? 'Sign In' : 'Create New Account'}
             </h3>
             {authError && <p className="text-xs text-red-500">{authError}</p>}
             
@@ -1982,62 +1664,29 @@ export default function App() {
                 <>
                   <div>
                     <label className="text-xs text-slate-400">Full Name</label>
-                    <input 
-                      type="text" 
-                      required 
-                      value={fullName} 
-                      onChange={(e)=>setFullName(e.target.value)} 
-                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
-                    />
+                    <input type="text" required value={fullName} onChange={(e)=>setFullName(e.target.value)} className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white" />
                   </div>
                   <div>
-                    <label className="text-xs text-slate-400">Mobile Number (Unchangeable after signup)</label>
-                    <input 
-                      type="text" 
-                      required 
-                      value={phone} 
-                      onChange={(e)=>setPhone(e.target.value)} 
-                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
-                    />
+                    <label className="text-xs text-slate-400">Mobile Number</label>
+                    <input type="text" required value={phone} onChange={(e)=>setPhone(e.target.value)} className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white" />
                   </div>
                   <div>
-                    <label className="text-xs text-slate-400">Referral Code (Optional - Leave blank if none)</label>
-                    <input 
-                      type="text" 
-                      placeholder={`e.g. ${adminSpecRefPlaceholder}`}
-                      value={signupReferralCode} 
-                      onChange={(e)=>setSignupReferralCode(e.target.value)} 
-                      className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-cyan-400 font-mono"
-                    />
+                    <label className="text-xs text-slate-400">Referral Code (Optional)</label>
+                    <input type="text" value={signupReferralCode} onChange={(e)=>setSignupReferralCode(e.target.value)} className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-cyan-400 font-mono" />
                   </div>
                 </>
               )}
               <div>
-                <label className="text-xs text-slate-400">Email Address (Unchangeable after signup)</label>
-                <input 
-                  type="email" 
-                  required 
-                  value={email} 
-                  onChange={(e)=>setEmail(e.that?.value || e.target.value)} 
-                  className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
-                />
+                <label className="text-xs text-slate-400">Email Address</label>
+                <input type="email" required value={email} onChange={(e)=>setEmail(e.target.value)} className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white" />
               </div>
               <div>
                 <label className="text-xs text-slate-400">Password</label>
-                <input 
-                  type="password" 
-                  required 
-                  value={password} 
-                  onChange={(e)=>setPassword(e.target.value)} 
-                  className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
-                />
+                <input type="password" required value={password} onChange={(e)=>setPassword(e.target.value)} className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white" />
               </div>
 
-              <button 
-                type="submit" 
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-white shadow-lg"
-              >
-                {authMode === 'login' ? 'Sign Sign' : 'Register Account'}
+              <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-white shadow-lg">
+                {authMode === 'login' ? 'Sign In' : 'Register Account'}
               </button>
             </form>
 
@@ -2048,13 +1697,7 @@ export default function App() {
                 <p>Already have an account? <button onClick={()=>setAuthMode('login')} className="text-blue-400 underline">Sign In</button></p>
               )}
             </div>
-
-            <button 
-              onClick={() => setShowAuthModal(false)}
-              className="w-full text-center text-xs text-slate-500 hover:text-slate-300 mt-2"
-            >
-              Close
-            </button>
+            <button onClick={() => setShowAuthModal(false)} className="w-full text-center text-xs text-slate-500 mt-2">Close</button>
           </div>
         </div>
       )}
@@ -2082,7 +1725,7 @@ function UserAdminRow({ usr, db }) {
     const newStatus = usr.status === 'Banned' ? 'Active' : 'Banned';
     try {
       await updateDoc(doc(db, "users", usr.id), { status: newStatus });
-      alert(`user status changed to ${newStatus}`);
+      alert(`User status changed to ${newStatus}`);
     } catch (err) {
       alert("Error: " + err.message);
     }
@@ -2093,43 +1736,26 @@ function UserAdminRow({ usr, db }) {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
         <div>
           <p className="text-sm font-medium text-slate-200">{usr.name || 'No Name'} ({usr.email})</p>
-          <p className="text-xs text-slate-400">Phone: {usr.phone || 'N/A'} | Ref Code: <span className="text-cyan-400 font-mono">{usr.referralCode || 'N/A'}</span> | Referred By: <span className="text-indigo-400">{usr.referredBy || 'None'}</span></p>
-          <p className="text-xs text-slate-400">Package: <span className="text-amber-400">{usr.package || 'None'}</span> | Status: <span className={usr.status === 'Banned' ? 'text-red-400' : 'text-emerald-400'}>{usr.status || 'Active'}</span></p>
+          <p className="text-xs text-slate-400">Phone: {usr.phone || 'N/A'} | Ref: <span className="text-cyan-400 font-mono">{usr.referralCode || 'N/A'}</span></p>
         </div>
         {usr.email !== '1roxi1@gmail.com' && (
-          <button 
-            onClick={handleToggleBan}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg text-white ${usr.status === 'Banned' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}
-          >
-            {usr.status === 'Banned' ? 'Unban User' : 'Ban Data'}
+          <button onClick={handleToggleBan} className={`px-3 py-1.5 text-xs font-semibold rounded-lg text-white ${usr.status === 'Banned' ? 'bg-emerald-600' : 'bg-red-600'}`}>
+            {usr.status === 'Banned' ? 'Unban' : 'Ban'}
           </button>
         )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center pt-3 border-t border-slate-800">
         <div>
-          <label className="text-[10px] text-slate-400 uppercase tracking-wider">Deposit Wallet (৳)</label>
-          <input 
-            type="number" 
-            value={depWallet} 
-            onChange={(e)=>setDepWallet(e.target.value)} 
-            className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
-          />
+          <label className="text-[10px] text-slate-400 uppercase">Deposit Wallet (৳)</label>
+          <input type="number" value={depWallet} onChange={(e)=>setDepWallet(e.target.value)} className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white" />
         </div>
         <div>
-          <label className="text-[10px] text-slate-400 uppercase tracking-wider">Earnings Wallet (৳)</label>
-          <input 
-            type="number" 
-            value= {earnWallet} 
-            onChange={(e)=>setEarnWallet(e.target.value)} 
-            className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white"
-          />
+          <label className="text-[10px] text-slate-400 uppercase">Earnings Wallet (৳)</label>
+          <input type="number" value={earnWallet} onChange={(e)=>setEarnWallet(e.target.value)} className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white" />
         </div>
         <div className="flex items-end h-full pt-1 sm:pt-4">
-          <button 
-            onClick={handleUpdateButtonHandler => handleUpdateBalance()}
-            className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-xs font-bold rounded-lg text-white shadow"
-          >
+          <button onClick={handleUpdateBalance} className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-xs font-bold rounded-lg text-white shadow">
             Update Balances
           </button>
         </div>
