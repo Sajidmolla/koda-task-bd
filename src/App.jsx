@@ -253,7 +253,6 @@ export default function App() {
               };
               setUserData(initialData);
               setProfileName(initialData.name);
-              // Non-blocking save
               setDoc(userDocRef, initialData, { merge: true }).catch(err => console.log(err));
             }
           } catch (e) {
