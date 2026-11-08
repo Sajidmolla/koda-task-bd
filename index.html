@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Under Maintenance — KODA TASK</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #070a13;
+      --card-bg: rgba(15, 23, 42, 0.82);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --primary: #3b82f6;
+      --amber: #f59e0b;
+      --emerald: #10b981;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', 'Hind Siliguri', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.16) 0%, transparent 60%),
+        radial-gradient(circle at 100% 100%, rgba(99, 102, 241, 0.08) 0%, transparent 50%);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px 16px;
+      overflow-x: hidden;
+    }
+
+    /* Floating animation for main container */
+    @keyframes floatCard {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-4px); }
+    }
+
+    .main-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 42px 32px;
+      max-width: 550px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 20px rgba(59, 130, 246, 0.05);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      animation: floatCard 6s ease-in-out infinite;
+      position: relative;
+    }
+
+    /* Ambient animated top border line */
+    .main-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 15%;
+      right: 15%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.6), rgba(245, 158, 11, 0.6), transparent);
+      border-radius: 9999px;
+    }
+
+    .brand {
+      font-size: 1.8rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: #ffffff;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .brand-glow {
+      background: linear-gradient(135deg, #ffffff 60%, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.28);
+      color: #fbbf24;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 22px;
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.1);
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      background-color: var(--amber);
+      border-radius: 50%;
+      animation: pulseDot 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 rgba(245, 158, 11, 0); }
+      50% { opacity: 0.5; transform: scale(1.2); box-shadow: 0 0 8px rgba(245, 158, 11, 0.8); }
+    }
+
+    h1 {
+      font-size: 1.55rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #ffffff;
+    }
+
+    .tagline {
+      font-size: 0.95rem;
+      color: #38bdf8;
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+
+    .desc-bn {
+      color: #cbd5e1;
+      font-size: 0.94rem;
+      line-height: 1.7;
+      margin-bottom: 26px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 12px 16px;
+    }
+
+    .section-title {
+      text-align: left;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .info-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 28px;
+      text-align: left;
+    }
+
+    /* Animated interactive info card */
+    .info-item {
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      cursor: default;
+    }
+
+    .info-item:hover {
+      transform: translateY(-3px) scale(1.01);
+      background: rgba(255, 255, 255, 0.045);
+      border-color: rgba(59, 130, 246, 0.35);
+      box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.4), 0 0 14px rgba(59, 130, 246, 0.1);
+    }
+
+    .info-icon {
+      font-size: 1.35rem;
+      line-height: 1;
+      transition: transform 0.3s ease;
+    }
+
+    .info-item:hover .info-icon {
+      transform: scale(1.15) rotate(4deg);
+    }
+
+    .info-item h3 {
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: #f8fafc;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tag-badge {
+      font-size: 0.65rem;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: rgba(16, 185, 129, 0.14);
+      color: var(--emerald);
+      border: 1px solid rgba(16, 185, 129, 0.28);
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .info-item p {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Refresh button with smooth interactive animation */
+    .refresh-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      background: #1e293b;
+      color: #f1f5f9;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      padding: 12px 26px;
+      border-radius: 12px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 24px;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+    }
+
+    .refresh-btn:hover {
+      background: #334155;
+      border-color: rgba(59, 130, 246, 0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4), 0 0 12px rgba(59, 130, 246, 0.2);
+    }
+
+    .refresh-btn:active {
+      transform: translateY(0);
+    }
+
+    .refresh-icon {
+      display: inline-block;
+      transition: transform 0.5s ease;
+    }
+
+    .refresh-btn:hover .refresh-icon {
+      transform: rotate(180deg);
+    }
+
+    footer {
+      font-size: 0.75rem;
+      color: #64748b;
+      border-top: 1px solid rgba(255, 255, 255, 0.07);
+      padding-top: 18px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="main-card">
+    <div class="brand">
+      <span class="brand-glow">KODA TASK</span>
+    </div>
+    
+    <div class="badge">
+      <span class="badge-dot"></span>
+      UNDER MAINTENANCE
+    </div>
+    
+    <h1>We'll Be Back Soon!</h1>
+    <div class="tagline">We're making things better for you.</div>
+    <div class="desc-bn">আমাদের ওয়েবসাইটে বর্তমানে গুরুত্বপূর্ণ রক্ষণাবেক্ষণ ও উন্নয়ন কাজ চলছে। আপনাদের আরও ভালো অভিজ্ঞতা দেওয়ার জন্য আমরা কাজ করছি।</div>
+
+    <div class="section-title">
+      — Maintenance Information
+    </div>
+
+    <div class="info-list">
+      <div class="info-item">
+        <div class="info-icon">🛡️</div>
+        <div>
+          <h3>Your Data Remains Secure <span class="tag-badge">100% PROTECTED</span></h3>
+          <p>Your account information, balance, task history and other saved records remain preserved during this maintenance period.</p>
+        </div>
+      </div>
+
+      <div class="info-item">
+        <div class="info-icon">⚙️</div>
+        <div>
+          <h3>System Improvements</h3>
+          <p>We are working behind the scenes to deliver a smoother, faster and more reliable platform.</p>
+        </div>
+      </div>
+
+      <div class="info-item">
+        <div class="info-icon">⏳</div>
+        <div>
+          <h3>Thank You for Your Patience</h3>
+          <p>Please check back later. We appreciate your patience, understanding, and continued trust in KODA TASK.</p>
+        </div>
+      </div>
+    </div>
+
+    <button class="refresh-btn" onclick="location.reload()">
+      <span class="refresh-icon">🔄</span> Check Site Status
+    </button>
+
+    <footer>
+      &copy; 2026 KODA TASK. All Rights Reserved.
+    </footer>
+  </div>
+
+</body>
+</html>
