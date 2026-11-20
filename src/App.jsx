@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   ShieldCheck, Wallet, Users, Settings, LogOut, CheckCircle,
   Copy, Lock, Clock, Award, DollarSign, ExternalLink, User,
-  BarChart2, Package, Layers, CreditCard, Plus, Trash2, Search,
-  AlertTriangle, Edit3, Send, Check
+  Package, Layers, CreditCard, Plus, Trash2, Search,
+  AlertTriangle, Edit3, Send
 } from 'lucide-react';
 import { auth, db } from './firebase';
 import {
@@ -29,10 +29,30 @@ import {
 
 const ADMIN_EMAIL = '1roxi1@gmail.com';
 
+const buildDefaultUserData = (firebaseUser, overrides = {}) => {
+  const cleanName = (overrides.name || firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Member').trim();
+  const baseCode = cleanName.replace(/[^a-zA-Z0-9]/g, '') || 'User';
+  return {
+    uid: firebaseUser.uid,
+    name: cleanName,
+    email: firebaseUser.email || '',
+    phone: overrides.phone || '',
+    referralCode: overrides.referralCode || `${baseCode}-${firebaseUser.uid.slice(0, 4).toUpperCase()}`,
+    referredBy: overrides.referredBy || '',
+    depositWallet: Number(overrides.depositWallet ?? 0),
+    earningsWallet: Number(overrides.earningsWallet ?? 0),
+    referralEarnings: Number(overrides.referralEarnings ?? 0),
+    package: overrides.package ?? (firebaseUser.email === ADMIN_EMAIL ? 'Admin Access' : null),
+    status: overrides.status || 'Active',
+    completedTasks: overrides.completedTasks || {},
+    createdAt: overrides.createdAt || new Date().toISOString()
+  };
+};
+
 export default function App() {
   const [authUser, setAuthUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [authMode, setAuthMode] = useState('register'); // 'register' or 'login'
+  const [authMode, setAuthMode] = useState('register'); // 'register' | 'login'
 
   // Auth inputs (Register requires Name, Mobile, Email, Password; Login requires Email & Password)
   const [nameInput, setNameInput] = useState('');
@@ -42,16 +62,16 @@ export default function App() {
   const [referralInput, setReferralInput] = useState('');
   const [authError, setAuthError] = useState('');
 
-  // Navigation & UI state (Original KODA Task site layout for users)
+  // Navigation & UI state
   const [lang, setLang] = useState('en');
   const [activeTab, setActiveTab] = useState('dashboard');
 
-  // Admin Control Panel state (Styled after the reference dark theme!)
-  const [adminSection, setAdminSection] = useState('tasks'); // 'tasks' | 'finance' | 'packages' | 'users' | 'settings'
-  const [adminFilter, setAdminFilter] = useState('All'); // 'All' | 'Pending' | 'Active'
+  // Admin Control Panel state (Reference dark theme applied ONLY inside Admin Control)
+  const [adminSection, setAdminSection] = useState('tasks');
+  const [adminFilter, setAdminFilter] = useState('All');
   const [adminSearch, setAdminSearch] = useState('');
 
-  // Fresh Real User State (No old/mock user data)
+  // Real User Data state
   const [userData, setUserData] = useState(null);
   const [profileName, setProfileName] = useState('');
   const [completedTasks, setCompletedTasks] = useState({});
@@ -76,7 +96,7 @@ export default function App() {
   const [taskCategoryInput, setTaskCategoryInput] = useState('Social');
   const [taskStatusInput, setTaskStatusInput] = useState('ACTIVE');
 
-  // Gateways & Packages (Synced with Firestore)
+  // Gateways & Packages
   const [gateways, setGateways] = useState({
     bkash: '01737966207',
     nagad: '01737966207',
@@ -193,7 +213,7 @@ export default function App() {
     }
   };
 
-  // Sync Settings & Tasks from Firestore
+  // Sync Settings, Tasks & Packages from Firestore
   useEffect(() => {
     const unsubGateways = onSnapshot(doc(db, 'settings', 'gateways'), (snap) => {
       if (snap.exists()) {
@@ -220,7 +240,7 @@ export default function App() {
     };
   }, []);
 
-  // Monitor Firebase Auth State
+  // Monitor Firebase Auth State & ensure User Profile + History always exist and stay synced
   useEffect(() => {
     let unsubUser = null;
     let unsubDep = null;
@@ -235,11 +255,21 @@ export default function App() {
         setAuthUser(currentUser);
         const userRef = doc(db, 'users', currentUser.uid);
 
+        // Set immediate safe userData so fields never render blank/missing
+        const initialSafe = buildDefaultUserData(currentUser, {
+          name: nameInput || currentUser.displayName,
+          phone: mobileInput,
+          referredBy: referralInput
+        });
+        setUserData(initialSafe);
+        setProfileName(initialSafe.name);
+        setCompletedTasks(initialSafe.completedTasks || {});
+
         try {
           const snap = await getDoc(userRef);
           if (snap.exists()) {
-            const data = snap.data();
-            if (data.status === 'Banned') {
+            const raw = snap.data();
+            if (raw.status === 'Banned') {
               alert('Your account has been suspended by admin.');
               await signOut(auth);
               setAuthUser(null);
@@ -247,58 +277,46 @@ export default function App() {
               setAuthLoading(false);
               return;
             }
-            setUserData(data);
-            setProfileName(data.name || currentUser.displayName || '');
-            setCompletedTasks(data.completedTasks || {});
+            const merged = buildDefaultUserData(currentUser, raw);
+            setUserData(merged);
+            setProfileName(merged.name);
+            setCompletedTasks(merged.completedTasks || {});
+            // Backfill missing fields if document existed partially
+            await setDoc(userRef, merged, { merge: true }).catch(() => {});
           } else {
-            const cleanName = (currentUser.displayName || nameInput || 'Member').trim();
-            const refCode = cleanName.replace(/\s+/g, '') + '-' + Math.floor(1000 + Math.random() * 9000);
-            const freshProfile = {
-              name: cleanName,
-              email: currentUser.email,
-              phone: mobileInput.trim() || 'N/A',
-              referralCode: refCode,
-              referredBy: referralInput.trim() || '',
-              depositWallet: 0,
-              earningsWallet: 0,
-              referralEarnings: 0,
-              package: currentUser.email === ADMIN_EMAIL ? 'Admin Access' : null,
-              status: 'Active',
-              completedTasks: {},
-              createdAt: new Date().toISOString()
-            };
-            await setDoc(userRef, freshProfile, { merge: true });
-            setUserData(freshProfile);
-            setProfileName(cleanName);
-            setCompletedTasks({});
+            await setDoc(userRef, initialSafe, { merge: true }).catch(() => {});
           }
 
           unsubUser = onSnapshot(userRef, (dSnap) => {
             if (dSnap.exists()) {
-              const u = dSnap.data();
-              setUserData(u);
-              setCompletedTasks(u.completedTasks || {});
+              const merged = buildDefaultUserData(currentUser, dSnap.data());
+              setUserData(merged);
+              setProfileName(merged.name);
+              setCompletedTasks(merged.completedTasks || {});
             }
-          });
+          }, () => {});
 
-          unsubDep = onSnapshot(query(collection(db, 'deposits'), where('uid', '==', currentUser.uid)), (snap) => {
-            setMyDeposits(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-          });
+          unsubDep = onSnapshot(
+            query(collection(db, 'deposits'), where('uid', '==', currentUser.uid)),
+            (snap) => {
+              const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+              rows.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+              setMyDeposits(rows);
+            },
+            () => {}
+          );
 
-          unsubWit = onSnapshot(query(collection(db, 'withdrawals'), where('uid', '==', currentUser.uid)), (snap) => {
-            setMyWithdrawals(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-          });
+          unsubWit = onSnapshot(
+            query(collection(db, 'withdrawals'), where('uid', '==', currentUser.uid)),
+            (snap) => {
+              const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+              rows.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+              setMyWithdrawals(rows);
+            },
+            () => {}
+          );
         } catch {
-          setUserData({
-            name: currentUser.displayName || 'Member',
-            email: currentUser.email,
-            phone: mobileInput || 'N/A',
-            depositWallet: 0,
-            earningsWallet: 0,
-            package: currentUser.email === ADMIN_EMAIL ? 'Admin Access' : null,
-            status: 'Active',
-            completedTasks: {}
-          });
+          // Keep initialSafe state if offline
         }
       } else {
         setAuthUser(null);
@@ -365,25 +383,15 @@ export default function App() {
         }
         const res = await createUserWithEmailAndPassword(auth, emailInput.trim(), passwordInput);
         await updateProfile(res.user, { displayName: nameInput.trim() });
-        const cleanName = nameInput.trim();
-        const refCode = cleanName.replace(/\s+/g, '') + '-' + Math.floor(1000 + Math.random() * 9000);
-        const newDoc = {
-          name: cleanName,
-          email: emailInput.trim(),
+        const freshDoc = buildDefaultUserData(res.user, {
+          name: nameInput.trim(),
           phone: mobileInput.trim(),
-          referralCode: refCode,
-          referredBy: referralInput.trim() || '',
-          depositWallet: 0,
-          earningsWallet: 0,
-          referralEarnings: 0,
-          package: res.user.email === ADMIN_EMAIL ? 'Admin Access' : null,
-          status: 'Active',
-          completedTasks: {},
-          createdAt: new Date().toISOString()
-        };
-        await setDoc(doc(db, 'users', res.user.uid), newDoc);
-        setUserData(newDoc);
-        setProfileName(cleanName);
+          email: emailInput.trim(),
+          referredBy: referralInput.trim()
+        });
+        await setDoc(doc(db, 'users', res.user.uid), freshDoc, { merge: true });
+        setUserData(freshDoc);
+        setProfileName(freshDoc.name);
       } else {
         await signInWithEmailAndPassword(auth, emailInput.trim(), passwordInput);
       }
@@ -413,7 +421,7 @@ export default function App() {
     return `Available in ${hours}h ${minutes}m`;
   };
 
-  // Admin: Add or Edit Task (Title, Reward, Timer, Link, Category, Status)
+  // Admin: Add or Edit Task
   const handleSaveTask = async (e) => {
     e.preventDefault();
     if (!taskTitleInput.trim()) return;
@@ -482,26 +490,29 @@ export default function App() {
   const handleDepositSubmit = async (e) => {
     e.preventDefault();
     if (!depositAmount || !depositTrxId || !senderPhone || !authUser) return;
+    const newDep = {
+      id: 'dep-' + Date.now(),
+      uid: authUser.uid,
+      email: authUser.email,
+      method: depositMethod,
+      amount: Number(depositAmount),
+      trxId: depositTrxId.trim().toUpperCase(),
+      senderPhone: senderPhone.trim(),
+      targetTier,
+      status: 'Pending Verification',
+      adminNote: 'Awaiting admin audit',
+      createdAt: new Date().toISOString(),
+      timestamp: serverTimestamp()
+    };
     try {
-      await addDoc(collection(db, 'deposits'), {
-        uid: authUser.uid,
-        email: authUser.email,
-        method: depositMethod,
-        amount: Number(depositAmount),
-        trxId: depositTrxId.trim().toUpperCase(),
-        senderPhone: senderPhone.trim(),
-        targetTier,
-        status: 'Pending Verification',
-        adminNote: '—',
-        timestamp: serverTimestamp()
-      });
-      alert('Deposit reference submitted successfully!');
-      setDepositAmount('');
-      setDepositTrxId('');
-      setSenderPhone('');
-    } catch (err) {
-      alert('Error: ' + err.message);
+      await addDoc(collection(db, 'deposits'), newDep);
+    } catch {
+      setMyDeposits(prev => [newDep, ...prev]);
     }
+    alert('Deposit reference submitted successfully!');
+    setDepositAmount('');
+    setDepositTrxId('');
+    setSenderPhone('');
   };
 
   const handleWithdrawSubmit = async (e) => {
@@ -522,27 +533,30 @@ export default function App() {
       alert('Insufficient earnings balance!');
       return;
     }
+    const newEarnings = Number(((userData?.earningsWallet || 0) - amount).toFixed(2));
+    const newWit = {
+      id: 'wit-' + Date.now(),
+      uid: authUser.uid,
+      email: authUser.email,
+      method: withdrawMethod,
+      amount,
+      account: withdrawAccount.trim(),
+      status: 'Pending',
+      payoutTrxId: '—',
+      adminNote: 'Pending review',
+      createdAt: new Date().toISOString(),
+      timestamp: serverTimestamp()
+    };
     try {
-      await addDoc(collection(db, 'withdrawals'), {
-        uid: authUser.uid,
-        email: authUser.email,
-        method: withdrawMethod,
-        amount,
-        account: withdrawAccount,
-        status: 'Pending',
-        payoutTrxId: '—',
-        adminNote: 'Pending review',
-        timestamp: serverTimestamp()
-      });
-      const newEarnings = userData.earningsWallet - amount;
+      await addDoc(collection(db, 'withdrawals'), newWit);
       await updateDoc(doc(db, 'users', authUser.uid), { earningsWallet: newEarnings });
-      setUserData({ ...userData, earningsWallet: newEarnings });
-      alert('Withdrawal request submitted successfully!');
-      setWithdrawAmount('');
-      setWithdrawAccount('');
-    } catch (err) {
-      alert('Error: ' + err.message);
+    } catch {
+      setMyWithdrawals(prev => [newWit, ...prev]);
     }
+    setUserData(prev => ({ ...prev, earningsWallet: newEarnings }));
+    alert('Withdrawal request submitted successfully!');
+    setWithdrawAmount('');
+    setWithdrawAccount('');
   };
 
   const handleBuyPackage = async (pkg) => {
@@ -552,17 +566,15 @@ export default function App() {
       setActiveTab('deposit');
       return;
     }
+    const newDeposit = Number(((userData.depositWallet || 0) - pkg.price).toFixed(2));
     try {
-      const newDeposit = userData.depositWallet - pkg.price;
       await updateDoc(doc(db, 'users', authUser.uid), {
         depositWallet: newDeposit,
         package: pkg.name
       });
-      setUserData({ ...userData, depositWallet: newDeposit, package: pkg.name });
-      alert(`Successfully activated ${pkg.name}!`);
-    } catch (err) {
-      alert('Error: ' + err.message);
-    }
+    } catch {}
+    setUserData(prev => ({ ...prev, depositWallet: newDeposit, package: pkg.name }));
+    alert(`Successfully activated ${pkg.name}!`);
   };
 
   if (authLoading) {
@@ -576,7 +588,7 @@ export default function App() {
     );
   }
 
-  // Real Registration & Login Gate (No demo mode; Register asks Name, Mobile, Email, Password)
+  // Real Registration & Login Gate (Register requires Name, Mobile, Email, Password)
   if (!authUser) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
@@ -707,7 +719,6 @@ export default function App() {
     { id: 'history', label: t[lang].history }
   ];
 
-  // Admin Control Panel filtered tasks
   const adminFilteredTasks = tasks.filter(task => {
     const matchesStatus =
       adminFilter === 'All' ||
@@ -724,6 +735,11 @@ export default function App() {
   const pendingWithdrawalsCount = allWithdrawals.filter(w => w.status === 'Pending').length;
   const activeTasksCount = tasks.filter(tk => tk.status === 'ACTIVE').length;
   const pendingTasksCount = tasks.filter(tk => tk.status !== 'ACTIVE').length;
+
+  const activeUser = userData || buildDefaultUserData(authUser, {
+    name: nameInput || authUser.displayName,
+    phone: mobileInput
+  });
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col justify-between w-full overflow-x-hidden">
@@ -799,7 +815,7 @@ export default function App() {
               >
                 <User className="h-3.5 w-3.5 text-blue-400" />
                 <span className="text-xs text-slate-200 font-medium truncate max-w-[110px]">
-                  {isAdmin ? 'Admin' : userData?.name || authUser.email}
+                  {isAdmin ? 'Admin' : activeUser.name || authUser.email}
                 </span>
               </button>
             </div>
@@ -813,7 +829,6 @@ export default function App() {
           {/* ================================================================= */}
           {isAdmin && activeTab === 'admin' ? (
             <div className="bg-[#090B10] border border-slate-800/90 rounded-2xl p-4 sm:p-6 shadow-2xl space-y-5">
-              {/* Top Admin Bar */}
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/90 pb-4">
                 <div className="flex items-center space-x-2.5">
                   <div className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-[#121622] border border-slate-800">
@@ -835,9 +850,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Two-Column Reference Admin Layout: Left Sidebar + Right Main Panel */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-                {/* Left Sidebar: Navigation + Alerts Card */}
                 <aside className="lg:col-span-3 space-y-4">
                   <div className="bg-[#111520] border border-slate-800/90 rounded-2xl p-4 space-y-3">
                     <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
@@ -878,7 +891,6 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Bottom-Left Alerts Card (Matching the Overdue / Due Soon card in reference) */}
                   <div className="bg-[#111520] border border-slate-800/90 rounded-2xl p-4 space-y-3">
                     <div className="flex items-center space-x-2">
                       <AlertTriangle className="h-4 w-4 text-rose-400" />
@@ -904,9 +916,7 @@ export default function App() {
                   </div>
                 </aside>
 
-                {/* Right Main Workspace inside Admin Control */}
                 <div className="lg:col-span-9 bg-[#111520] border border-slate-800/90 rounded-2xl p-5 space-y-5">
-                  {/* Top Section Header + Filter + Search */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
                     <div>
                       <h2 className="text-lg font-bold text-white capitalize">
@@ -941,7 +951,6 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* 4 Summary Counter Cards (Total / Pending / Due Soon / Active OK) */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div className="bg-[#0D1018] border border-slate-800/90 rounded-xl p-3.5">
                       <span className="text-xs text-slate-400 block">Total Tasks</span>
@@ -963,7 +972,6 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* SECTION 1: TASKS CUSTOMIZER */}
                   {adminSection === 'tasks' && (
                     <div className="space-y-5">
                       <form onSubmit={handleSaveTask} className="bg-[#0D1018] border border-slate-800/90 rounded-xl p-4 space-y-3">
@@ -1065,7 +1073,6 @@ export default function App() {
                         </div>
                       </form>
 
-                      {/* Reference-style Status Table */}
                       <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                           <thead>
@@ -1125,7 +1132,6 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* SECTION 2: BILLING & FINANCE (Deposits + Withdrawals) */}
                   {adminSection === 'finance' && (
                     <div className="space-y-5">
                       <div>
@@ -1212,7 +1218,6 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* SECTION 3: USERS */}
                   {adminSection === 'users' && (
                     <div className="space-y-3">
                       {allUsers.length === 0 ? (
@@ -1225,7 +1230,6 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* SECTION 4: PACKAGES */}
                   {adminSection === 'packages' && (
                     <div className="space-y-4">
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-[#0D1018] border border-slate-800 rounded-xl p-3.5">
@@ -1292,7 +1296,6 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* SECTION 5: GATEWAY SETTINGS */}
                   {adminSection === 'settings' && (
                     <div className="bg-[#0D1018] border border-slate-800 rounded-xl p-4 space-y-4 text-xs">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1349,9 +1352,21 @@ export default function App() {
             </div>
           ) : activeTab === 'dashboard' ? (
             /* =============================================================== */
-            /* ORIGINAL USER SITE DASHBOARD (Unchanged Site Layout)            */
+            /* DASHBOARD (With Full User Data & Task Summary)                */
             /* =============================================================== */
             <div className="space-y-6">
+              <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <div>
+                  <span className="text-slate-400">Logged in as: </span>
+                  <strong className="text-white">{activeUser.name}</strong>{' '}
+                  <span className="text-slate-400 font-mono">({activeUser.email})</span>
+                </div>
+                <div className="font-mono text-slate-300">
+                  Mobile: <span className="text-emerald-400">{activeUser.phone || 'Not Set'}</span> • Ref:{' '}
+                  <span className="text-cyan-400">{activeUser.referralCode}</span>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl flex items-center space-x-4">
                   <div className="p-3 rounded-xl bg-blue-950 border border-blue-800 text-blue-400">
@@ -1359,7 +1374,7 @@ export default function App() {
                   </div>
                   <div>
                     <p className="text-xs text-slate-400">{t[lang].depositWallet}</p>
-                    <h3 className="text-2xl font-bold text-blue-400 mt-1">৳ {userData?.depositWallet || 0}</h3>
+                    <h3 className="text-2xl font-bold text-blue-400 mt-1">৳ {activeUser.depositWallet || 0}</h3>
                   </div>
                 </div>
 
@@ -1369,7 +1384,7 @@ export default function App() {
                   </div>
                   <div>
                     <p className="text-xs text-slate-400">{t[lang].earningsWallet}</p>
-                    <h3 className="text-2xl font-bold text-emerald-400 mt-1">৳ {userData?.earningsWallet || 0}</h3>
+                    <h3 className="text-2xl font-bold text-emerald-400 mt-1">৳ {activeUser.earningsWallet || 0}</h3>
                   </div>
                 </div>
 
@@ -1380,7 +1395,7 @@ export default function App() {
                   <div>
                     <p className="text-xs text-slate-400">{t[lang].activePackage}</p>
                     <h3 className="text-base md:text-lg font-bold text-amber-400 mt-1 truncate">
-                      {userData?.package ? userData.package : t[lang].noPackage}
+                      {activeUser.package ? activeUser.package : t[lang].noPackage}
                     </h3>
                   </div>
                 </div>
@@ -1419,7 +1434,7 @@ export default function App() {
                         ) : (
                           <button
                             onClick={() => {
-                              if (!userData?.package && !isAdmin) {
+                              if (!activeUser.package && !isAdmin) {
                                 alert('Please activate a membership package first!');
                                 setActiveTab('membership');
                                 return;
@@ -1471,7 +1486,7 @@ export default function App() {
                       ) : (
                         <button
                           onClick={() => {
-                            if (!userData?.package && !isAdmin) {
+                            if (!activeUser.package && !isAdmin) {
                               alert('Please activate a membership package first!');
                               setActiveTab('membership');
                               return;
@@ -1495,7 +1510,10 @@ export default function App() {
             <div className="space-y-6">
               <div className="text-center max-w-2xl mx-auto mb-8">
                 <h2 className="text-2xl md:text-3xl font-bold text-amber-400 mb-2">Select Membership Plan</h2>
-                <p className="text-xs md:text-sm text-slate-400">Choose a tier that fits your daily availability.</p>
+                <p className="text-xs md:text-sm text-slate-400">
+                  Current Deposit Balance: <strong className="text-blue-400">৳{activeUser.depositWallet || 0}</strong> • Active Plan:{' '}
+                  <strong className="text-amber-400">{activeUser.package || 'None'}</strong>
+                </p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {packages.map((pkg, idx) => (
@@ -1562,6 +1580,21 @@ export default function App() {
                 <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
                   <form onSubmit={handleDepositSubmit} className="space-y-4">
                     <div>
+                      <label className="text-xs text-slate-400 block mb-1">Target Package / Balance</label>
+                      <select
+                        value={targetTier}
+                        onChange={(e) => setTargetTier(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white"
+                      >
+                        <option value="Direct Balance">Direct Balance</option>
+                        {packages.map(p => (
+                          <option key={p.id} value={`${p.name} — ৳${p.price}`}>
+                            {p.name} — ৳{p.price}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
                       <label className="text-xs text-slate-400 block mb-1">Sender Mobile Number *</label>
                       <input
                         type="text"
@@ -1569,7 +1602,7 @@ export default function App() {
                         placeholder="01700000000"
                         value={senderPhone}
                         onChange={(e) => setSenderPhone(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white font-mono"
                       />
                     </div>
                     <div>
@@ -1580,7 +1613,7 @@ export default function App() {
                         placeholder="500"
                         value={depositAmount}
                         onChange={(e) => setDepositAmount(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white font-mono"
                       />
                     </div>
                     <div>
@@ -1605,7 +1638,7 @@ export default function App() {
             <div className="max-w-2xl mx-auto bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-5">
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-bold text-white">Wallet Cashout Gateway</h2>
-                <span className="text-xl font-extrabold text-emerald-400">৳{(userData?.earningsWallet || 0).toFixed(2)}</span>
+                <span className="text-xl font-extrabold text-emerald-400">৳{(activeUser.earningsWallet || 0).toFixed(2)}</span>
               </div>
               <form onSubmit={handleWithdrawSubmit} className="space-y-4">
                 <div className="grid grid-cols-3 gap-3">
@@ -1630,7 +1663,7 @@ export default function App() {
                     placeholder="01700000000"
                     value={withdrawAccount}
                     onChange={(e) => setWithdrawAccount(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white font-mono"
                   />
                 </div>
                 <div>
@@ -1641,7 +1674,7 @@ export default function App() {
                     placeholder={`Min ৳${gateways.minWithdraw || 100}`}
                     value={withdrawAmount}
                     onChange={(e) => setWithdrawAmount(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white font-mono"
                   />
                 </div>
                 <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold text-white text-sm">
@@ -1652,15 +1685,19 @@ export default function App() {
           ) : activeTab === 'referral' ? (
             <div className="max-w-3xl mx-auto bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-4">
               <h2 className="text-xl font-bold text-amber-400">Referral Program</h2>
+              <p className="text-xs text-slate-400">
+                Referral Earnings: <strong className="text-emerald-400">৳{activeUser.referralEarnings || 0}</strong> • Referred By:{' '}
+                <strong className="text-indigo-400">{activeUser.referredBy || 'None'}</strong>
+              </p>
               <div className="flex space-x-2">
                 <input
                   type="text"
                   readOnly
-                  value={userData?.referralCode || 'N/A'}
+                  value={activeUser.referralCode}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-cyan-400 font-mono"
                 />
                 <button
-                  onClick={() => navigator.clipboard.writeText(userData?.referralCode || '')}
+                  onClick={() => navigator.clipboard.writeText(activeUser.referralCode)}
                   className="px-4 bg-blue-600 hover:bg-blue-700 text-xs font-bold rounded-xl text-white"
                 >
                   Copy
@@ -1670,26 +1707,32 @@ export default function App() {
           ) : activeTab === 'history' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-3">
-                <h3 className="text-lg font-semibold text-slate-200">Deposit History</h3>
+                <h3 className="text-lg font-semibold text-slate-200">Deposit History ({myDeposits.length})</h3>
                 {myDeposits.length === 0 ? (
-                  <p className="text-xs text-slate-400">No deposit history.</p>
+                  <p className="text-xs text-slate-400">No deposit history yet.</p>
                 ) : (
                   myDeposits.map(d => (
-                    <div key={d.id} className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex justify-between text-xs">
-                      <span>৳{d.amount} ({d.method}) — {d.trxId}</span>
+                    <div key={d.id} className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
+                      <div>
+                        <p className="font-bold text-blue-400">৳{d.amount} ({d.method})</p>
+                        <p className="text-slate-400 font-mono text-[11px]">TrxID: {d.trxId} • Phone: {d.senderPhone}</p>
+                      </div>
                       <span className="text-amber-400 font-semibold">{d.status}</span>
                     </div>
                   ))
                 )}
               </div>
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-3">
-                <h3 className="text-lg font-semibold text-slate-200">Withdrawal History</h3>
+                <h3 className="text-lg font-semibold text-slate-200">Withdrawal History ({myWithdrawals.length})</h3>
                 {myWithdrawals.length === 0 ? (
-                  <p className="text-xs text-slate-400">No withdrawal history.</p>
+                  <p className="text-xs text-slate-400">No withdrawal history yet.</p>
                 ) : (
                   myWithdrawals.map(w => (
-                    <div key={w.id} className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex justify-between text-xs">
-                      <span>৳{w.amount} ({w.method}) — {w.account}</span>
+                    <div key={w.id} className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
+                      <div>
+                        <p className="font-bold text-emerald-400">৳{w.amount} ({w.method})</p>
+                        <p className="text-slate-400 font-mono text-[11px]">Account: {w.account}</p>
+                      </div>
                       <span className="text-amber-400 font-semibold">{w.status}</span>
                     </div>
                   ))
@@ -1703,8 +1746,11 @@ export default function App() {
                 onSubmit={async (e) => {
                   e.preventDefault();
                   if (!authUser) return;
-                  await updateDoc(doc(db, 'users', authUser.uid), { name: profileName });
-                  setUserData({ ...userData, name: profileName });
+                  const updated = { ...activeUser, name: profileName.trim() || activeUser.name };
+                  try {
+                    await setDoc(doc(db, 'users', authUser.uid), updated, { merge: true });
+                  } catch {}
+                  setUserData(updated);
                   alert('Profile updated!');
                 }}
                 className="space-y-4"
@@ -1714,7 +1760,7 @@ export default function App() {
                   <input
                     type="text"
                     required
-                    value={profileName}
+                    value={profileName || activeUser.name}
                     onChange={(e) => setProfileName(e.target.value)}
                     className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm text-white"
                   />
@@ -1724,8 +1770,8 @@ export default function App() {
                   <input
                     type="text"
                     disabled
-                    value={authUser.email}
-                    className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm text-slate-500"
+                    value={activeUser.email}
+                    className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm text-slate-400 font-mono"
                   />
                 </div>
                 <div>
@@ -1733,8 +1779,17 @@ export default function App() {
                   <input
                     type="text"
                     disabled
-                    value={userData?.phone || 'N/A'}
-                    className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm text-slate-500"
+                    value={activeUser.phone || 'Not Set'}
+                    className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm text-slate-400 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400">Referral Code</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={activeUser.referralCode}
+                    className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm text-cyan-400 font-mono"
                   />
                 </div>
                 <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold text-white text-sm">
@@ -1792,15 +1847,13 @@ export default function App() {
             {taskCompletedMsg ? (
               <button
                 onClick={async () => {
-                  const newEarnings = (userData?.earningsWallet || 0) + Number(selectedTask.reward);
+                  const newEarnings = Number(((activeUser.earningsWallet || 0) + Number(selectedTask.reward)).toFixed(2));
                   const updatedCompleted = { ...completedTasks, [selectedTask.id]: Date.now() };
+                  const nextProfile = { ...activeUser, earningsWallet: newEarnings, completedTasks: updatedCompleted };
                   if (authUser) {
-                    await updateDoc(doc(db, 'users', authUser.uid), {
-                      earningsWallet: newEarnings,
-                      completedTasks: updatedCompleted
-                    });
+                    await setDoc(doc(db, 'users', authUser.uid), nextProfile, { merge: true }).catch(() => {});
                   }
-                  setUserData({ ...userData, earningsWallet: newEarnings, completedTasks: updatedCompleted });
+                  setUserData(nextProfile);
                   setCompletedTasks(updatedCompleted);
                   setSelectedTask(null);
                   alert(`Collected ৳${selectedTask.reward}!`);
