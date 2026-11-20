@@ -37,34 +37,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Sort Firestore timestamps newest-first without changing stored records.
-// Legacy records without a valid timestamp are kept at the bottom.
-const getDepositTime = (value) => {
-  if (!value) return null;
-  if (typeof value.toMillis === 'function') return value.toMillis();
-  if (value instanceof Date) return value.getTime();
-  if (typeof value === 'number') return value;
-  if (typeof value === 'string') {
-    const parsed = Date.parse(value);
-    return Number.isNaN(parsed) ? null : parsed;
-  }
-  if (typeof value.seconds === 'number') {
-    return value.seconds * 1000 + Math.floor((value.nanoseconds || 0) / 1e6);
-  }
-  return null;
-};
-
-const sortDepositsNewestFirst = (deposits) =>
-  [...deposits].sort((a, b) => {
-    const timeA = getDepositTime(a.timestamp);
-    const timeB = getDepositTime(b.timestamp);
-
-    if (timeA === null && timeB === null) return String(b.id).localeCompare(String(a.id));
-    if (timeA === null) return 1;
-    if (timeB === null) return -1;
-    return timeB - timeA || String(b.id).localeCompare(String(a.id));
-  });
-
 export default function App() {
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
@@ -801,55 +773,28 @@ export default function App() {
                     <h3 className="text-lg font-semibold text-slate-200">Deposit Verification & Audits</h3>
                     <div className="space-y-3">
                       {allDeposits.length === 0 ? <p className="text-xs text-slate-400">No deposit requests.</p> : 
-                        sortDepositsNewestFirst(allDeposits).map(dep => (
+                        allDeposits.map(dep => (
                           <div key={dep.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-950 p-4 rounded-xl border border-slate-800 gap-2">
                             <div>
                               <p className="text-sm font-medium text-slate-200">{dep.email} - ৳{dep.amount} ({dep.method}) [Target: {dep.targetTier || 'Direct Credit'}]</p>
-                              <p className="text-xs text-slate-400">TrxID: <span className="text-blue-400 font-mono">{dep.trxId}</span> | Sender Phone: <span className="text-emerald-400 font-mono">{dep.senderPhone || 'N/A'}</span> | Status: <span className={`${dep.status === 'Approved' ? 'text-emerald-400' : dep.status === 'Cancelled' || dep.status === 'Rejected' ? 'text-red-400' : 'text-amber-400'}`}>{dep.status}</span></p>
+                              <p className="text-xs text-slate-400">TrxID: <span className="text-blue-400 font-mono">{dep.trxId}</span> | Sender Phone: <span className="text-emerald-400 font-mono">{dep.senderPhone || 'N/A'}</span> | Status: <span className="text-amber-400">{dep.status}</span></p>
                             </div>
                             {(dep.status === 'Pending Verification' || dep.status === 'Pending') && (
-                              <div className="flex flex-wrap gap-2">
-                                <button 
-                                  onClick={async () => {
-                                    try {
-                                      await updateDoc(doc(db, "deposits", dep.id), { status: "Approved" });
-                                      const usrRef = doc(db, "users", dep.uid);
-                                      const usrSnap = await getDoc(usrRef);
-                                      if(usrSnap.exists()) {
-                                        const currentDep = usrSnap.data().depositWallet || 0;
-                                        await updateDoc(usrRef, { depositWallet: currentDep + dep.amount });
-                                      }
-                                      alert("Deposit approved and credited!");
-                                    } catch (err) {
-                                      console.error("Deposit approval failed:", err);
-                                      alert("Could not approve deposit. Please try again.");
-                                    }
-                                  }}
-                                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold rounded-lg text-white shadow"
-                                >
-                                  Approve Deposit
-                                </button>
-                                <button
-                                  onClick={async () => {
-                                    const confirmed = window.confirm(
-                                      `Cancel this ৳${dep.amount} deposit request for ${dep.email}? This will only change its status.`
-                                    );
-                                    if (!confirmed) return;
-
-                                    try {
-                                      // Preserve the deposit document and every field; update status only.
-                                      await updateDoc(doc(db, "deposits", dep.id), { status: "Cancelled" });
-                                      alert("Deposit cancelled. Existing deposit information was preserved.");
-                                    } catch (err) {
-                                      console.error("Deposit cancellation failed:", err);
-                                      alert("Could not cancel deposit. Please try again.");
-                                    }
-                                  }}
-                                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-xs font-semibold rounded-lg text-white shadow"
-                                >
-                                  Cancel Deposit
-                                </button>
-                              </div>
+                              <button 
+                                onClick={async () => {
+                                  await updateDoc(doc(db, "deposits", dep.id), { status: "Approved" });
+                                  const usrRef = doc(db, "users", dep.uid);
+                                  const usrSnap = await getDoc(usrRef);
+                                  if(usrSnap.exists()) {
+                                    const currentDep = usrSnap.data().depositWallet || 0;
+                                    await updateDoc(usrRef, { depositWallet: currentDep + dep.amount });
+                                  }
+                                  alert("Deposit approved and credited!");
+                                }}
+                                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold rounded-lg text-white shadow"
+                              >
+                                Approve Deposit
+                              </button>
                             )}
                           </div>
                         ))
